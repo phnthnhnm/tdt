@@ -93,11 +93,66 @@ class _DiffScreenState extends State<DiffScreen> {
     try {
       await qb.login(host, port, useHttps, username, password);
 
-      final bytes = await File(_newPath!).readAsBytes();
-      await qb.addTorrentBytes(host, port, useHttps, bytes, paused: true);
-
       final torrent = await Torrent.parseFromFile(_newPath!);
       final name = torrent.name;
+
+      final ignoredFiles = _addedFiles.where((added) {
+        final la = added.toLowerCase();
+        return blacklist.any(
+          (b) => b.isNotEmpty && la.contains(b.toLowerCase()),
+        );
+      }).toList();
+      final selectableCount = _addedFiles.length - ignoredFiles.length;
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm Add to qBittorrent'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add torrent "${name}" to qBittorrent and select $selectableCount new file(s)?',
+              ),
+              if (ignoredFiles.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Ignored files (match blacklist):',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 160,
+                  width: double.maxFinite,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: ignoredFiles
+                          .map((f) => SelectableText(f))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      final bytes = await File(_newPath!).readAsBytes();
+      await qb.addTorrentBytes(host, port, useHttps, bytes, paused: true);
 
       String? hash;
       for (var i = 0; i < 8; i++) {
@@ -131,8 +186,11 @@ class _DiffScreenState extends State<DiffScreen> {
         final qbName = f['name'] as String;
         bool isBlacklisted(String name) {
           final lname = name.toLowerCase();
-          return blacklist.any((b) => b.isNotEmpty && lname.contains(b.toLowerCase()));
+          return blacklist.any(
+            (b) => b.isNotEmpty && lname.contains(b.toLowerCase()),
+          );
         }
+
         if (isBlacklisted(qbName)) continue;
         final qbBase = p.basename(qbName);
         final matched = _addedFiles.any((added) {
