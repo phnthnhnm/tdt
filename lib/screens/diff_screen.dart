@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/qbittorrent_service.dart';
-import '../torrent_service.dart';
+import '../services/torrent_service.dart';
 import '../widgets/file_row.dart';
 import '../widgets/result_list.dart';
 import 'settings/settings_screen.dart';
@@ -23,7 +23,6 @@ class DiffScreen extends StatefulWidget {
 class _DiffScreenState extends State<DiffScreen> {
   final TorrentService _torrentService = TorrentService();
 
-  String? _oldPath;
   String? _newPath;
   String? _inlineErrorMessage;
 
@@ -46,7 +45,6 @@ class _DiffScreenState extends State<DiffScreen> {
     if (dataFolder == null) {
       setState(() {
         _newPath = newPath;
-        _oldPath = null;
         _inlineErrorMessage = 'Data folder not set in Settings';
       });
       return;
@@ -58,7 +56,6 @@ class _DiffScreenState extends State<DiffScreen> {
     if (!exists) {
       setState(() {
         _newPath = newPath;
-        _oldPath = null;
         _inlineErrorMessage = 'No matching old torrent found in data folder';
       });
       return;
@@ -66,7 +63,6 @@ class _DiffScreenState extends State<DiffScreen> {
 
     setState(() {
       _newPath = newPath;
-      _oldPath = candidate;
       _inlineErrorMessage = null;
     });
   }
@@ -116,8 +112,9 @@ class _DiffScreenState extends State<DiffScreen> {
         await Future.delayed(const Duration(seconds: 1));
       }
 
-      if (hash == null)
+      if (hash == null) {
         throw Exception('Could not find torrent in qBittorrent');
+      }
 
       final files = await qb.getTorrentFiles(host, port, useHttps, hash);
       final allIds = files.map((f) => f['index'].toString()).join('|');
@@ -134,7 +131,9 @@ class _DiffScreenState extends State<DiffScreen> {
         final qbBase = p.basename(qbName);
         final matched = _addedFiles.any((added) {
           final addedBase = p.basename(added);
-          return addedBase == qbBase || added.endsWith(qbName) || qbName.endsWith(addedBase);
+          return addedBase == qbBase ||
+              added.endsWith(qbName) ||
+              qbName.endsWith(addedBase);
         });
         if (matched) idsToKeep.add(f['index'].toString());
       }
@@ -151,15 +150,17 @@ class _DiffScreenState extends State<DiffScreen> {
 
       await qb.startTorrents(host, port, useHttps, hash);
 
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Torrent added to qBittorrent')),
         );
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('qBittorrent error: $e')));
+      }
     }
   }
 
@@ -171,7 +172,6 @@ class _DiffScreenState extends State<DiffScreen> {
     final dataFolder = prefs.getString('data_folder');
     if (dataFolder == null) {
       setState(() {
-        _oldPath = null;
         _inlineErrorMessage = 'Data folder not set in Settings';
       });
       return;
@@ -182,7 +182,6 @@ class _DiffScreenState extends State<DiffScreen> {
     final exists = await File(candidate).exists();
     if (!exists) {
       setState(() {
-        _oldPath = null;
         _inlineErrorMessage = 'No matching old torrent found in data folder';
       });
       return;
@@ -198,7 +197,6 @@ class _DiffScreenState extends State<DiffScreen> {
         _addedFiles = result['added']!;
         _removedFiles = result['removed']!;
         _hasCompared = true;
-        _oldPath = candidate;
         _inlineErrorMessage = null;
       });
     } catch (e) {
@@ -214,7 +212,6 @@ class _DiffScreenState extends State<DiffScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Torrent Diff Tool"),
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -251,10 +248,26 @@ class _DiffScreenState extends State<DiffScreen> {
                 _inlineErrorMessage!,
                 style: const TextStyle(color: Colors.red),
               ),
-            if (_oldPath != null)
-              Text(
-                'Using old torrent: ${_oldPath != null ? Uri.file(_oldPath!).pathSegments.last : ''}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+
+            if (_hasCompared)
+              Padding(
+                padding: const EdgeInsets.only(top: 6.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      'New: ${_addedFiles.length}',
+                      style: const TextStyle(fontSize: 12, color: Colors.green),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Removed: ${_removedFiles.length}',
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ],
+                ),
               ),
             const SizedBox(height: 20),
             ElevatedButton.icon(

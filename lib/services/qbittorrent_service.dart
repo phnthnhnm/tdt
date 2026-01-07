@@ -28,8 +28,9 @@ class QBittorrentService {
       body: {'username': username, 'password': password},
       headers: {'Referer': base},
     );
-    if (res.statusCode != 200)
+    if (res.statusCode != 200) {
       throw Exception('qBittorrent login failed (${res.statusCode})');
+    }
     final setCookie = res.headers['set-cookie'];
     if (setCookie != null) {
       _cookie = setCookie.split(';').first;
@@ -48,7 +49,9 @@ class QBittorrentService {
     final uri = Uri.parse('$base/api/v2/torrents/add');
     final request = http.MultipartRequest('POST', uri);
     request.headers['Referer'] = base;
-    if (_cookie != null) request.headers['Cookie'] = _cookie!;
+    if (_cookie != null) {
+      request.headers['Cookie'] = _cookie!;
+    }
     request.files.add(
       http.MultipartFile.fromBytes(
         'torrents',
@@ -56,13 +59,16 @@ class QBittorrentService {
         filename: 'upload.torrent',
       ),
     );
-    if (savePath != null) request.fields['savepath'] = savePath;
+    if (savePath != null) {
+      request.fields['savepath'] = savePath;
+    }
     request.fields['paused'] = paused ? 'true' : 'false';
 
     final streamed = await _client.send(request);
     final resp = await http.Response.fromStream(streamed);
-    if (resp.statusCode != 200)
+    if (resp.statusCode != 200) {
       throw Exception('Failed to add torrent (${resp.statusCode})');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getTorrents(
@@ -76,7 +82,9 @@ class QBittorrentService {
       uri,
       headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
     );
-    if (res.statusCode != 200) throw Exception('Failed to get torrents');
+    if (res.statusCode != 200) {
+      throw Exception('Failed to get torrents');
+    }
     final List<dynamic> data = json.decode(res.body);
     return data.cast<Map<String, dynamic>>();
   }
@@ -93,7 +101,9 @@ class QBittorrentService {
       uri,
       headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
     );
-    if (res.statusCode != 200) throw Exception('Failed to get torrent files');
+    if (res.statusCode != 200) {
+      throw Exception('Failed to get torrent files');
+    }
     final List<dynamic> data = json.decode(res.body);
     return data.cast<Map<String, dynamic>>();
   }
@@ -109,17 +119,14 @@ class QBittorrentService {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/filePrio');
 
-    /// Set file priority. Use `index` field (recommended) when passing torrent file
-    /// indexes as returned by `/torrents/files`.
-    // Use 'id' as the form field name (server expects 'id' even when the
-    // values are file 'index' numbers returned by /torrents/files).
     final res = await _client.post(
       uri,
       body: {'hash': hash, 'id': ids, 'priority': priority.toString()},
       headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
     );
-    if (res.statusCode != 200)
+    if (res.statusCode != 200) {
       throw Exception('Failed to set file priority (${res.statusCode})');
+    }
   }
 
   Future<void> startTorrents(
@@ -129,14 +136,14 @@ class QBittorrentService {
     String hashes,
   ) async {
     final base = _baseUrl(host, port, useHttps);
-    // Use POST for mutating API calls.
     final uriPost = Uri.parse('$base/api/v2/torrents/start');
     final res = await _client.post(
       uriPost,
       body: {'hashes': hashes},
       headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
     );
-    if (res.statusCode != 200)
+    if (res.statusCode != 200) {
       throw Exception('Failed to start torrent(s) (${res.statusCode})');
+    }
   }
 }

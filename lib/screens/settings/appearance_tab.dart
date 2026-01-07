@@ -18,29 +18,21 @@ class AppearanceTab extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            RadioListTile<ThemeMode>(
-              value: ThemeMode.system,
-              groupValue: mode,
-              title: const Text('System'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ThemeMode>(
+              initialValue: mode,
+              items: const [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text('System'),
+                ),
+                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              ],
               onChanged: (v) {
                 if (v != null) ThemeManager.setThemeMode(v);
               },
-            ),
-            RadioListTile<ThemeMode>(
-              value: ThemeMode.light,
-              groupValue: mode,
-              title: const Text('Light'),
-              onChanged: (v) {
-                if (v != null) ThemeManager.setThemeMode(v);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              value: ThemeMode.dark,
-              groupValue: mode,
-              title: const Text('Dark'),
-              onChanged: (v) {
-                if (v != null) ThemeManager.setThemeMode(v);
-              },
+              decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
           ],
         );
