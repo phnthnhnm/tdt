@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class ResultList extends StatelessWidget {
+class ResultList extends StatefulWidget {
   final List<String> addedFiles;
   final List<String> removedFiles;
 
@@ -11,7 +11,15 @@ class ResultList extends StatelessWidget {
   });
 
   @override
+  State<ResultList> createState() => _ResultListState();
+}
+
+class _ResultListState extends State<ResultList> {
+  @override
   Widget build(BuildContext context) {
+    final addedFiles = widget.addedFiles;
+    final removedFiles = widget.removedFiles;
+
     if (addedFiles.isEmpty && removedFiles.isEmpty) {
       return const Center(child: Text("No changes found."));
     }
@@ -33,7 +41,7 @@ class ResultList extends StatelessWidget {
             isAdded ? Icons.add_circle : Icons.remove_circle,
             color: isAdded ? Colors.green : Colors.red,
           ),
-          title: Text(
+          title: SelectableText(
             name,
             style: TextStyle(
               color: isAdded ? Colors.greenAccent : Colors.redAccent,
