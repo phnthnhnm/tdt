@@ -4,7 +4,7 @@ class TorrentService {
   /// Reads a .torrent file and returns a Set of file paths inside it.
   Future<Set<String>> getFilesFromTorrent(String filePath) async {
     // dtorrent_parser parses the file and handles the binary decoding
-    final Torrent model = await Torrent.parse(filePath);
+    final Torrent model = await Torrent.parseFromFile(filePath);
 
     Set<String> filePaths = {};
 
