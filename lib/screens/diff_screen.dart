@@ -173,6 +173,14 @@ class _DiffScreenState extends State<DiffScreen> {
         throw Exception('Could not find torrent in qBittorrent');
       }
 
+      // As a fallback: if the server ignored the 'paused' flag when adding,
+      // explicitly pause the torrent now to ensure it does not start.
+      try {
+        await qb.pauseTorrents(host, port, useHttps, hash);
+      } catch (e) {
+        // Non-fatal: if pause fails, continue — user will see torrent running.
+      }
+
       final files = await qb.getTorrentFiles(host, port, useHttps, hash);
       final allIds = files.map((f) => f['index'].toString()).join('|');
 
@@ -213,11 +221,11 @@ class _DiffScreenState extends State<DiffScreen> {
         );
       }
 
-      await qb.startTorrents(host, port, useHttps, hash);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Torrent added to qBittorrent')),
+          const SnackBar(
+            content: Text('Torrent added to qBittorrent (paused)'),
+          ),
         );
       }
     } catch (e) {

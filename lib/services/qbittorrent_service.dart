@@ -146,4 +146,22 @@ class QBittorrentService {
       throw Exception('Failed to start torrent(s) (${res.statusCode})');
     }
   }
+
+  Future<void> pauseTorrents(
+    String host,
+    int port,
+    bool useHttps,
+    String hashes,
+  ) async {
+    final base = _baseUrl(host, port, useHttps);
+    final uriPost = Uri.parse('$base/api/v2/torrents/stop');
+    final res = await _client.post(
+      uriPost,
+      body: {'hashes': hashes},
+      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Failed to pause torrent(s) (${res.statusCode})');
+    }
+  }
 }

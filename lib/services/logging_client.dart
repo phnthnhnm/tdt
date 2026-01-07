@@ -20,6 +20,11 @@ class LoggingClient extends http.BaseClient {
 
     _logger.info('➡ ${request.method} ${request.url}');
     if (kDebugMode) {
+      // Also print to debug console so it's visible in Flutter debug output
+      // even if logging handlers aren't configured to show fine-level logs.
+      debugPrint('➡ ${request.method} ${request.url}');
+    }
+    if (kDebugMode) {
       _logger.fine('Headers: $safeHeaders');
     }
 
@@ -55,6 +60,11 @@ class LoggingClient extends http.BaseClient {
     _logger.info(
       '⬅ ${response.statusCode} ${request.url} (${elapsed.inMilliseconds}ms)',
     );
+    if (kDebugMode) {
+      debugPrint(
+        '⬅ ${response.statusCode} ${request.url} (${elapsed.inMilliseconds}ms)',
+      );
+    }
     if (kDebugMode) {
       _logger.fine('Response headers: ${response.headers}');
       _logger.fine('Response body: $bodySnippet');
