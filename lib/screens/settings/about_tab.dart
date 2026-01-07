@@ -32,16 +32,14 @@ class AboutTab extends StatelessWidget {
                   const Text('Source code: '),
                   InkWell(
                     child: const Text(
-                      'github.com/phnthnhnm/torrent_diff_tool',
+                      'github.com/phnthnhnm/tdt',
                       style: TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
                       ),
                     ),
                     onTap: () async {
-                      final url = Uri.parse(
-                        'https://github.com/phnthnhnm/torrent_diff_tool',
-                      );
+                      final url = Uri.parse('https://github.com/phnthnhnm/tdt');
                       if (await canLaunchUrl(url)) {
                         await launchUrl(
                           url,

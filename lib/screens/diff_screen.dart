@@ -291,7 +291,7 @@ class _DiffScreenState extends State<DiffScreen> {
             tooltip: 'Report a Bug',
             onPressed: () async {
               final url = Uri.parse(
-                'https://github.com/phnthnhnm/torrent_diff_tool/issues/new',
+                'https://github.com/phnthnhnm/tdt/issues/new',
               );
               if (await canLaunchUrl(url)) {
                 await launchUrl(url, mode: LaunchMode.externalApplication);

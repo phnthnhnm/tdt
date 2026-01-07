@@ -74,7 +74,7 @@ class _DataTabState extends State<DataTab> {
           '${now.hour.toString().padLeft(2, '0')}'
           '${now.minute.toString().padLeft(2, '0')}'
           '${now.second.toString().padLeft(2, '0')}';
-      final filename = 'torrent_diff_tool_backup_$formatted.json';
+      final filename = 'tdt_backup_$formatted.json';
       final backupFile = File(
         '$selectedDirectory${Platform.pathSeparator}$filename',
       );
