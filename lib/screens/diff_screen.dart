@@ -76,6 +76,7 @@ class _DiffScreenState extends State<DiffScreen> {
     final username = prefs.getString('qbt_username') ?? '';
     final password = prefs.getString('qbt_password') ?? '';
     final useHttps = prefs.getBool('qbt_use_https') ?? false;
+    final blacklist = prefs.getStringList('qbt_blacklist') ?? [];
 
     if (host == null || portStr == null) {
       if (mounted) {
@@ -128,6 +129,11 @@ class _DiffScreenState extends State<DiffScreen> {
       final idsToKeep = <String>[];
       for (var f in files) {
         final qbName = f['name'] as String;
+        bool isBlacklisted(String name) {
+          final lname = name.toLowerCase();
+          return blacklist.any((b) => b.isNotEmpty && lname.contains(b.toLowerCase()));
+        }
+        if (isBlacklisted(qbName)) continue;
         final qbBase = p.basename(qbName);
         final matched = _addedFiles.any((added) {
           final addedBase = p.basename(added);

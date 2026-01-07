@@ -14,12 +14,15 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
   static const _usernameKey = 'qbt_username';
   static const _passwordKey = 'qbt_password';
   static const _useHttpsKey = 'qbt_use_https';
+  static const _blacklistKey = 'qbt_blacklist';
 
   final _hostController = TextEditingController();
   final _portController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _blacklistController = TextEditingController();
   bool _useHttps = false;
+  List<String> _blacklist = [];
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
       _usernameController.text = prefs.getString(_usernameKey) ?? '';
       _passwordController.text = prefs.getString(_passwordKey) ?? '';
       _useHttps = prefs.getBool(_useHttpsKey) ?? false;
+      _blacklist = prefs.getStringList(_blacklistKey) ?? [];
     });
   }
 
@@ -45,6 +49,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
     await prefs.setString(_usernameKey, _usernameController.text);
     await prefs.setString(_passwordKey, _passwordController.text);
     await prefs.setBool(_useHttpsKey, _useHttps);
+    await prefs.setStringList(_blacklistKey, _blacklist);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('qBittorrent settings saved')),
@@ -104,6 +109,52 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
               ],
             ),
             const SizedBox(height: 12),
+            const Text(
+              'Blacklisted substrings (files containing these will be ignored)',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _blacklistController,
+                    decoration: const InputDecoration(
+                      labelText: 'Add blacklist text',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final v = _blacklistController.text.trim();
+                    if (v.isEmpty) return;
+                    setState(() {
+                      _blacklist.add(v);
+                      _blacklistController.clear();
+                    });
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < _blacklist.length; i++)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(_blacklist[i]),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    setState(() {
+                      _blacklist.removeAt(i);
+                    });
+                  },
+                ),
+              ),
+            const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.save),
@@ -113,5 +164,15 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _hostController.dispose();
+    _portController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _blacklistController.dispose();
+    super.dispose();
   }
 }
