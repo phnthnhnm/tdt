@@ -1,9 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../torrent_service.dart';
 import '../widgets/file_row.dart';
 import '../widgets/result_list.dart';
+import 'settings/settings_screen.dart';
 
 class DiffScreen extends StatefulWidget {
   const DiffScreen({super.key});
@@ -65,7 +67,32 @@ class _DiffScreenState extends State<DiffScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Comic Torrent Differ")),
+      appBar: AppBar(
+        title: const Text("Comic Torrent Differ"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Report a Bug',
+            onPressed: () async {
+              final url = Uri.parse(
+                'https://github.com/phnthnhnm/torrent_diff_tool/issues/new',
+              );
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(

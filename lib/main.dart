@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'screens/diff_screen.dart';
+import 'theme_manager.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ThemeManager.init();
   runApp(const MyApp());
 }
 
@@ -11,10 +14,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Torrent Diff Tool',
-      theme: ThemeData.dark(),
-      home: const DiffScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeManager.themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'Torrent Diff Tool',
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: mode,
+          home: const DiffScreen(),
+        );
+      },
     );
   }
 }

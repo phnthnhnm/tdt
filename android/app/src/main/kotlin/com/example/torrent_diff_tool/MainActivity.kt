@@ -1,4 +1,4 @@
-package com.example.torrent_diff_tool
+package com.phanthanhnam.torrent_diff_tool
 
 import io.flutter.embedding.android.FlutterActivity
 
