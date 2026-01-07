@@ -38,11 +38,17 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
       _usernameController.text = prefs.getString(_usernameKey) ?? '';
       _passwordController.text = prefs.getString(_passwordKey) ?? '';
       _useHttps = prefs.getBool(_useHttpsKey) ?? false;
-      _blacklist = prefs.getStringList(_blacklistKey) ?? [];
+      final raw = prefs.getStringList(_blacklistKey) ?? [];
+      _blacklist = [];
+      for (final s in raw) {
+        final lower = s.trim().toLowerCase();
+        if (lower.isEmpty) continue;
+        if (!_blacklist.contains(lower)) _blacklist.add(lower);
+      }
     });
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool showSnackBar = true}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_hostKey, _hostController.text);
     await prefs.setString(_portKey, _portController.text);
@@ -50,7 +56,8 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
     await prefs.setString(_passwordKey, _passwordController.text);
     await prefs.setBool(_useHttpsKey, _useHttps);
     await prefs.setStringList(_blacklistKey, _blacklist);
-    if (mounted) {
+    if (mounted && showSnackBar) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('qBittorrent settings saved')),
       );
@@ -127,12 +134,14 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () {
-                    final v = _blacklistController.text.trim();
+                    final v = _blacklistController.text.trim().toLowerCase();
                     if (v.isEmpty) return;
+                    if (_blacklist.contains(v)) return;
                     setState(() {
                       _blacklist.add(v);
                       _blacklistController.clear();
                     });
+                    _save(showSnackBar: false);
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Add'),
@@ -140,26 +149,25 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
               ],
             ),
             const SizedBox(height: 8),
-            for (var i = 0; i < _blacklist.length; i++)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(_blacklist[i]),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () {
-                    setState(() {
-                      _blacklist.removeAt(i);
-                    });
-                  },
-                ),
+            if (_blacklist.isNotEmpty)
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: _blacklist.asMap().entries.map((e) {
+                  final i = e.key;
+                  final text = e.value;
+                  return Chip(
+                    label: Text(text),
+                    onDeleted: () {
+                      setState(() {
+                        _blacklist.removeAt(i);
+                      });
+                      _save(showSnackBar: false);
+                    },
+                  );
+                }).toList(),
               ),
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: const Text('Save'),
-            ),
           ],
         ),
       ),

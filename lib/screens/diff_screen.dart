@@ -104,6 +104,7 @@ class _DiffScreenState extends State<DiffScreen> {
       }).toList();
       final selectableCount = _addedFiles.length - ignoredFiles.length;
 
+      if (!mounted) return;
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -113,7 +114,7 @@ class _DiffScreenState extends State<DiffScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Add torrent "${name}" to qBittorrent and select $selectableCount new file(s)?',
+                'Add torrent "$name" to qBittorrent and select $selectableCount new file(s)?',
               ),
               if (ignoredFiles.isNotEmpty) ...[
                 const SizedBox(height: 12),
