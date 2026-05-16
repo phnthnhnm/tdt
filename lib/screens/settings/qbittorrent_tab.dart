@@ -13,6 +13,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
   static const _portKey = 'qbt_port';
   static const _usernameKey = 'qbt_username';
   static const _passwordKey = 'qbt_password';
+  static const _apiKeyKey = 'qbt_api_key';
   static const _useHttpsKey = 'qbt_use_https';
   static const _blacklistKey = 'qbt_blacklist';
 
@@ -20,6 +21,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
   final _portController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _apiKeyController = TextEditingController();
   final _blacklistController = TextEditingController();
   bool _useHttps = false;
   List<String> _blacklist = [];
@@ -37,6 +39,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
       _portController.text = prefs.getString(_portKey) ?? '8080';
       _usernameController.text = prefs.getString(_usernameKey) ?? '';
       _passwordController.text = prefs.getString(_passwordKey) ?? '';
+      _apiKeyController.text = prefs.getString(_apiKeyKey) ?? '';
       _useHttps = prefs.getBool(_useHttpsKey) ?? false;
       final raw = prefs.getStringList(_blacklistKey) ?? [];
       _blacklist = [];
@@ -54,6 +57,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
     await prefs.setString(_portKey, _portController.text);
     await prefs.setString(_usernameKey, _usernameController.text);
     await prefs.setString(_passwordKey, _passwordController.text);
+    await prefs.setString(_apiKeyKey, _apiKeyController.text);
     await prefs.setBool(_useHttpsKey, _useHttps);
     await prefs.setStringList(_blacklistKey, _blacklist);
     if (mounted && showSnackBar) {
@@ -77,6 +81,24 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () => _save(),
+                  child: const Text('Save'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _apiKeyController.clear();
+                    });
+                    _save();
+                  },
+                  child: const Text('Clear API Key'),
+                ),
+              ],
+            ),
             TextField(
               controller: _hostController,
               decoration: const InputDecoration(
@@ -98,6 +120,16 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _apiKeyController,
+              decoration: const InputDecoration(
+                labelText: 'API Key (qbt_...)',
+                helperText:
+                    'Optional: use API key for stateless authentication',
+              ),
               obscureText: true,
             ),
             const SizedBox(height: 8),
@@ -180,6 +212,7 @@ class _QBittorrentTabState extends State<QBittorrentTab> {
     _portController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _apiKeyController.dispose();
     _blacklistController.dispose();
     super.dispose();
   }

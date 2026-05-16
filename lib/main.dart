@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
 import 'screens/diff_screen.dart';
+import 'services/qbittorrent_service.dart';
 import 'theme_manager.dart';
 
 Future<void> main() async {
@@ -25,6 +26,7 @@ Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeManager.init();
+  await QBittorrentService.shared.initFromPrefs();
   runApp(const MyApp());
 }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'logging_client.dart';
 
@@ -8,9 +9,30 @@ class QBittorrentService {
   final http.Client _client;
   String? _cookie;
   bool _bypassLocalAuth = false;
+  String? _apiKey;
 
   QBittorrentService([http.Client? client])
     : _client = client ?? LoggingClient();
+
+  static final QBittorrentService shared = QBittorrentService();
+
+  Future<void> initFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('qbt_api_key') ?? '';
+    if (apiKey.isNotEmpty) setApiKey(apiKey);
+  }
+
+  void setApiKey(String? key) => _apiKey = key;
+
+  Map<String, String> _buildHeaders(String base) {
+    final headers = <String, String>{'Referer': base};
+    if (_apiKey != null && _apiKey!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${_apiKey!}';
+    } else if (!_bypassLocalAuth && _cookie != null) {
+      headers['Cookie'] = _cookie!;
+    }
+    return headers;
+  }
 
   String _baseUrl(String host, int port, bool useHttps) =>
       '${useHttps ? 'https' : 'http'}://$host:$port';
@@ -22,6 +44,9 @@ class QBittorrentService {
     String username,
     String password,
   ) async {
+    if (_apiKey != null && _apiKey!.isNotEmpty) {
+      throw Exception('Cannot call login when API key authentication is set');
+    }
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/auth/login');
     final res = await _client.post(
@@ -50,10 +75,7 @@ class QBittorrentService {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/add');
     final request = http.MultipartRequest('POST', uri);
-    request.headers['Referer'] = base;
-    if (_cookie != null) {
-      request.headers['Cookie'] = _cookie!;
-    }
+    request.headers.addAll(_buildHeaders(base));
     request.files.add(
       http.MultipartFile.fromBytes(
         'torrents',
@@ -80,9 +102,7 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/info');
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
-    final res = await _client.get(uri, headers: headers);
+    final res = await _client.get(uri, headers: _buildHeaders(base));
     if (res.statusCode != 200) {
       throw Exception('Failed to get torrents');
     }
@@ -98,9 +118,7 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/files?hash=$hash');
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
-    final res = await _client.get(uri, headers: headers);
+    final res = await _client.get(uri, headers: _buildHeaders(base));
     if (res.statusCode != 200) {
       throw Exception('Failed to get torrent files');
     }
@@ -119,12 +137,10 @@ class QBittorrentService {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/filePrio');
 
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uri,
       body: {'hash': hash, 'id': ids, 'priority': priority.toString()},
-      headers: headers,
+      headers: _buildHeaders(base),
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to set file priority (${res.statusCode})');
@@ -139,12 +155,10 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uriPost = Uri.parse('$base/api/v2/torrents/start');
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uriPost,
       body: {'hashes': hashes},
-      headers: headers,
+      headers: _buildHeaders(base),
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to start torrent(s) (${res.statusCode})');
@@ -159,12 +173,10 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uriPost = Uri.parse('$base/api/v2/torrents/stop');
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uriPost,
       body: {'hashes': hashes},
-      headers: headers,
+      headers: _buildHeaders(base),
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to pause torrent(s) (${res.statusCode})');
@@ -178,9 +190,7 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/app/preferences');
-    final headers = <String, String>{'Referer': base};
-    if (!_bypassLocalAuth && _cookie != null) headers['Cookie'] = _cookie!;
-    final res = await _client.get(uri, headers: headers);
+    final res = await _client.get(uri, headers: _buildHeaders(base));
     if (res.statusCode != 200) {
       throw Exception('Failed to get preferences (${res.statusCode})');
     }

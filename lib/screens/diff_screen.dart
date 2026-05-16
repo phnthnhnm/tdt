@@ -89,9 +89,16 @@ class _DiffScreenState extends State<DiffScreen> {
 
     final port = int.tryParse(portStr) ?? 8080;
 
-    final qb = QBittorrentService();
+    final qb = QBittorrentService.shared;
     try {
-      await qb.login(host, port, useHttps, username, password);
+      final apiKey = prefs.getString('qbt_api_key') ?? '';
+      if (apiKey.isNotEmpty) {
+        // shared service already initialized from prefs at startup, but
+        // apply in case settings changed during runtime
+        qb.setApiKey(apiKey);
+      } else {
+        await qb.login(host, port, useHttps, username, password);
+      }
 
       final torrent = await Torrent.parseFromFile(_newPath!);
       final name = torrent.name;
