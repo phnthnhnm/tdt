@@ -30,7 +30,7 @@ class _DataTabState extends State<DataTab> {
   }
 
   Future<void> _pickFolder() async {
-    String? result = await FilePicker.platform.getDirectoryPath();
+    String? result = await FilePicker.getDirectoryPath();
     if (result != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, result);
@@ -62,7 +62,7 @@ class _DataTabState extends State<DataTab> {
       }
     }
 
-    String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
+    String? selectedDirectory = await FilePicker.getDirectoryPath(
       dialogTitle: 'Select folder to save backup',
     );
     if (selectedDirectory != null) {
@@ -87,7 +87,7 @@ class _DataTabState extends State<DataTab> {
   }
 
   Future<void> _restoreData() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await FilePicker.pickFiles(
       dialogTitle: 'Select backup JSON file',
       type: FileType.custom,
       allowedExtensions: ['json'],

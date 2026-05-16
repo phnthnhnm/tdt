@@ -31,7 +31,7 @@ class _DiffScreenState extends State<DiffScreen> {
   bool _hasCompared = false;
 
   Future<void> _pickNewFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['torrent'],
     );
