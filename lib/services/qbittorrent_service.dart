@@ -28,7 +28,8 @@ class QBittorrentService {
       body: {'username': username, 'password': password},
       headers: {'Referer': base},
     );
-    if (res.statusCode != 200) {
+    // qBittorrent 5.2.0 returns 204 on successful login (no content)
+    if (res.statusCode != 200 && res.statusCode != 204) {
       throw Exception('qBittorrent login failed (${res.statusCode})');
     }
     final setCookie = res.headers['set-cookie'];
@@ -78,10 +79,9 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/info');
-    final res = await _client.get(
-      uri,
-      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
-    );
+    final headers = <String, String>{'Referer': base};
+    if (_cookie != null) headers['Cookie'] = _cookie!;
+    final res = await _client.get(uri, headers: headers);
     if (res.statusCode != 200) {
       throw Exception('Failed to get torrents');
     }
@@ -97,10 +97,9 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/files?hash=$hash');
-    final res = await _client.get(
-      uri,
-      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
-    );
+    final headers = <String, String>{'Referer': base};
+    if (_cookie != null) headers['Cookie'] = _cookie!;
+    final res = await _client.get(uri, headers: headers);
     if (res.statusCode != 200) {
       throw Exception('Failed to get torrent files');
     }
@@ -119,10 +118,12 @@ class QBittorrentService {
     final base = _baseUrl(host, port, useHttps);
     final uri = Uri.parse('$base/api/v2/torrents/filePrio');
 
+    final headers = <String, String>{'Referer': base};
+    if (_cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uri,
       body: {'hash': hash, 'id': ids, 'priority': priority.toString()},
-      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
+      headers: headers,
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to set file priority (${res.statusCode})');
@@ -137,10 +138,12 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uriPost = Uri.parse('$base/api/v2/torrents/start');
+    final headers = <String, String>{'Referer': base};
+    if (_cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uriPost,
       body: {'hashes': hashes},
-      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
+      headers: headers,
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to start torrent(s) (${res.statusCode})');
@@ -155,10 +158,12 @@ class QBittorrentService {
   ) async {
     final base = _baseUrl(host, port, useHttps);
     final uriPost = Uri.parse('$base/api/v2/torrents/stop');
+    final headers = <String, String>{'Referer': base};
+    if (_cookie != null) headers['Cookie'] = _cookie!;
     final res = await _client.post(
       uriPost,
       body: {'hashes': hashes},
-      headers: {'Referer': base, if (_cookie != null) 'Cookie': _cookie!},
+      headers: headers,
     );
     if (res.statusCode != 200) {
       throw Exception('Failed to pause torrent(s) (${res.statusCode})');
