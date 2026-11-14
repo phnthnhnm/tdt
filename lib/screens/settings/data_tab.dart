@@ -1,9 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../services/settings_backup.dart';
 
 class DataTab extends StatefulWidget {
   const DataTab({super.key});
@@ -46,21 +47,7 @@ class _DataTabState extends State<DataTab> {
 
   Future<void> _backupData() async {
     final prefs = await SharedPreferences.getInstance();
-    final Map<String, dynamic> dump = {};
-    for (var key in prefs.getKeys()) {
-      final value = prefs.get(key);
-      if (value is bool) {
-        dump[key] = {'type': 'bool', 'value': value};
-      } else if (value is int) {
-        dump[key] = {'type': 'int', 'value': value};
-      } else if (value is double) {
-        dump[key] = {'type': 'double', 'value': value};
-      } else if (value is String) {
-        dump[key] = {'type': 'string', 'value': value};
-      } else if (value is List<String>) {
-        dump[key] = {'type': 'stringList', 'value': value};
-      }
-    }
+    final dump = SettingsBackup.encodeToText(prefs);
 
     String? selectedDirectory = await FilePicker.getDirectoryPath(
       dialogTitle: 'Select folder to save backup',
@@ -78,7 +65,7 @@ class _DataTabState extends State<DataTab> {
       final backupFile = File(
         '$selectedDirectory${Platform.pathSeparator}$filename',
       );
-      await backupFile.writeAsString(jsonEncode(dump));
+      await backupFile.writeAsString(dump);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -96,26 +83,9 @@ class _DataTabState extends State<DataTab> {
       final file = File(result.files.single.path!);
       final inputJson = await file.readAsString();
       try {
-        final Map<String, dynamic> data = jsonDecode(inputJson);
+        final data = SettingsBackup.decode(inputJson);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.clear();
-        for (var entry in data.entries) {
-          final k = entry.key;
-          final v = entry.value as Map<String, dynamic>;
-          final type = v['type'] as String?;
-          final val = v['value'];
-          if (type == 'bool') {
-            await prefs.setBool(k, val as bool);
-          } else if (type == 'int') {
-            await prefs.setInt(k, val as int);
-          } else if (type == 'double') {
-            await prefs.setDouble(k, (val as num).toDouble());
-          } else if (type == 'string') {
-            await prefs.setString(k, val as String);
-          } else if (type == 'stringList') {
-            await prefs.setStringList(k, List<String>.from(val));
-          }
-        }
+        await SettingsBackup.restore(prefs, data);
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
