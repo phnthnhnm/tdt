@@ -79,7 +79,9 @@ confirmation the first time. Choose "More info" and then "Run anyway".
    username and password or an API key, and press **Test connection**.
 3. Open the new `.torrent` with **Browse…**, Ctrl+O or drag and drop. The
    comparison runs immediately.
-4. Review the changes, then press **Add to qBittorrent (paused)**.
+4. Review the changes, then press **Add to qBittorrent (paused)**. The torrent is
+   added paused with only the added and changed files selected; **Open
+   qBittorrent** opens the WebUI afterwards.
 
 ### Keyboard shortcuts
 

@@ -20,6 +20,7 @@ public sealed partial class DiffViewModel : ObservableObject
     private readonly Window _window;
 
     private TorrentComparison? _comparison;
+    private QBittorrentConnection? _lastConnection;
 
     public DiffViewModel(AppServices services, IDialogService dialogs, Window window)
     {
@@ -105,6 +106,9 @@ public sealed partial class DiffViewModel : ObservableObject
 
     public bool CanAdd => HasDownloads && !IsBusy;
 
+    /// <summary>True once a torrent was added, so the WebUI can be opened.</summary>
+    public bool CanOpenQBittorrent => _lastConnection is not null;
+
     public bool ShowWelcome => !HasCompared && !HasNewTorrent && !IsBusy;
 
     public bool ShowResults => HasCompared;
@@ -143,6 +147,8 @@ public sealed partial class DiffViewModel : ObservableObject
         NewTorrentPath = releasedTorrentPath;
         ArchivedTorrentPath = null;
         _comparison = null;
+        _lastConnection = null;
+        OnPropertyChanged(nameof(CanOpenQBittorrent));
         Rows.Clear();
         AddedCount = 0;
         RemovedCount = 0;
@@ -208,6 +214,8 @@ public sealed partial class DiffViewModel : ObservableObject
         NewTorrentPath = null;
         ArchivedTorrentPath = null;
         _comparison = null;
+        _lastConnection = null;
+        OnPropertyChanged(nameof(CanOpenQBittorrent));
         Rows.Clear();
         AddedCount = 0;
         RemovedCount = 0;
@@ -258,6 +266,9 @@ public sealed partial class DiffViewModel : ObservableObject
             ProgressMessage = "Adding the torrent and selecting files...";
             var result = await _services.Adder.AddAsync(connection, NewTorrentPath, plan);
 
+            _lastConnection = connection;
+            OnPropertyChanged(nameof(CanOpenQBittorrent));
+
             StatusMessage = result.SelectedCount == 0
                 ? "Torrent added to qBittorrent (paused); no files matched the selection"
                 : $"Torrent added to qBittorrent (paused); {result.SelectedCount} of {result.FileCount} files selected";
@@ -276,6 +287,20 @@ public sealed partial class DiffViewModel : ObservableObject
         {
             IsBusy = false;
             ProgressMessage = null;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenQBittorrentAsync()
+    {
+        if (_lastConnection is null)
+        {
+            return;
+        }
+
+        if (!await Windows.System.Launcher.LaunchUriAsync(new Uri(_lastConnection.BaseUrl)))
+        {
+            ErrorMessage = "Could not open the qBittorrent WebUI";
         }
     }
 

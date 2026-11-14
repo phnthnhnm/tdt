@@ -81,6 +81,11 @@
                     Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                     Severity="Success" />
 
+                <HyperlinkButton
+                    Command="{x:Bind ViewModel.OpenQBittorrentCommand}"
+                    Content="Open qBittorrent"
+                    Visibility="{x:Bind services:Ui.Visible(ViewModel.CanOpenQBittorrent), Mode=OneWay}" />
+
                 <StackPanel
                     Orientation="Horizontal"
                     Spacing="10"
@@ -153,6 +158,7 @@
 
                 <ListView
                     Grid.Row="1"
+                    AutomationProperties.Name="Changed files"
                     ItemsSource="{x:Bind ViewModel.Rows}"
                     SelectionMode="None"
                     Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowResults), Mode=OneWay}">
