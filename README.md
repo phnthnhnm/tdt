@@ -174,7 +174,9 @@ Releases are automated with
 
 `RELEASE_PLEASE_TOKEN` must be configured as a repository secret. A release
 created with the default `GITHUB_TOKEN` does not trigger other workflows, so the
-build would never run.
+build would never run. Until the secret exists the workflow falls back to
+`GITHUB_TOKEN`, which still opens the release pull request and creates the
+release, but that release does not start the build.
 
 Never create tags or releases by hand.
 
