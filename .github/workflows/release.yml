@@ -1,49 +1,121 @@
-name: Release Build and Upload
+name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  build-windows:
-    name: Build and Upload Windows
+  portable:
+    name: Portable build
     runs-on: windows-latest
     steps:
-      - name: Checkout release tag
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/checkout@v7
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "11.0.x"
 
-      - name: Publish self-contained build
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
         run: >
           dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64
-          --self-contained -p:WindowsAppSDKSelfContained=true
-          -o artifacts/publish
+          --self-contained false -p:WindowsAppSDKSelfContained=false
+          -p:Version=${{ steps.version.outputs.version }}
+          -o artifacts/app
 
-      - name: Extract version and zip
-        id: zip
+      - name: Verify layout
+        shell: pwsh
+        run: |
+          foreach ($file in @('tdt.exe', 'tdt.pri')) {
+            if (-not (Test-Path (Join-Path 'artifacts/app' $file))) {
+              throw "artifacts/app is missing $file"
+            }
+          }
+
+      - name: Create archive
         shell: bash
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
-          ZIP_NAME="tdt-${VERSION}-windows-x64.zip"
-          cd artifacts/publish
-          7z a -tzip -mx=9 "../${ZIP_NAME}" *
-          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          (cd artifacts/app && 7z a -tzip -mx=9 "../tdt-${VERSION}-windows-x64.zip" *)
 
-      - name: Upload to release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-portable
+          path: artifacts/tdt-*-windows-x64.zip
+          if-no-files-found: error
+
+  standalone:
+    name: Standalone build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "11.0.x"
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        run: >
+          dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true
+          -p:Version=${{ steps.version.outputs.version }}
+          -o artifacts/app
+
+      - name: Verify layout
+        shell: pwsh
+        run: |
+          foreach ($file in @('tdt.exe', 'tdt.pri')) {
+            if (-not (Test-Path (Join-Path 'artifacts/app' $file))) {
+              throw "artifacts/app is missing $file"
+            }
+          }
+
+      - name: Create archive
         shell: bash
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
-            "artifacts/${{ steps.zip.outputs.ZIP_NAME }}" \
-            --clobber
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          (cd artifacts/app && 7z a -tzip -mx=9 "../tdt-${VERSION}-windows-x64-standalone.zip" *)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-standalone
+          path: artifacts/tdt-*-windows-x64-standalone.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [portable, standalone]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create or update the release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                 --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --clobber

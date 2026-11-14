@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -261,15 +262,20 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private static string ReadVersion()
     {
-        var version = typeof(SettingsViewModel).Assembly.GetName().Version;
-        if (version is null)
+        // MinVer stamps the full version into InformationalVersion and leaves
+        // AssemblyVersion at major.0.0.0, so this is the property to show.
+        var informational = typeof(SettingsViewModel).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informational))
         {
             return "0.0.0";
         }
 
-        return version.Build > 0
-            ? string.Create(CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}.{version.Build}")
-            : string.Create(CultureInfo.InvariantCulture, $"{version.Major}.{version.Minor}");
+        // Drop build metadata such as "1.2.3+abc123".
+        var metadata = informational.IndexOf('+', StringComparison.Ordinal);
+        return metadata < 0 ? informational : informational[..metadata];
     }
 
     private void Persist(Action<AppSettings> mutate, string? status = null)

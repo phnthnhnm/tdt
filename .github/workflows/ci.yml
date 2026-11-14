@@ -33,8 +33,8 @@ jobs:
             echo "should-run=false" >> $GITHUB_OUTPUT
           fi
 
-  ci:
-    name: CI
+  quality:
+    name: Build, test and portable archive
     needs: check-message
     if: needs.check-message.outputs.should-run == 'true'
     runs-on: windows-latest
@@ -57,13 +57,53 @@ jobs:
       - name: Test
         run: dotnet test tdt.slnx -c Release --no-build
 
-      - name: Publish
+      # The two publish modes cannot share an intermediate directory: a
+      # framework-dependent publish leaves a generated manifest that makes the
+      # next self-contained publish skip its WinRT registration step. Each mode
+      # therefore gets its own job and workspace.
+      - name: Publish portable build
         run: >
           dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64
-          --self-contained -p:WindowsAppSDKSelfContained=true
-          -o artifacts/publish
+          --self-contained false -p:WindowsAppSDKSelfContained=false
+          -o artifacts/app
+
+      - name: Verify portable layout
+        shell: pwsh
+        run: |
+          foreach ($file in @('tdt.exe', 'tdt.pri')) {
+            if (-not (Test-Path (Join-Path 'artifacts/app' $file))) {
+              throw "artifacts/app is missing $file"
+            }
+          }
+
+  standalone:
+    name: Standalone archive
+    needs: check-message
+    if: needs.check-message.outputs.should-run == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "11.0.x"
+
+      - name: Publish standalone build
+        run: >
+          dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64
+          --self-contained true -p:WindowsAppSDKSelfContained=true
+          -o artifacts/app
+
+      - name: Verify standalone layout
+        shell: pwsh
+        run: |
+          foreach ($file in @('tdt.exe', 'tdt.pri')) {
+            if (-not (Test-Path (Join-Path 'artifacts/app' $file))) {
+              throw "artifacts/app is missing $file"
+            }
+          }
 
       - uses: actions/upload-artifact@v7
         with:
-          name: windows-build
-          path: artifacts/publish
+          name: windows-build-standalone
+          path: artifacts/app

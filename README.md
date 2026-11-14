@@ -37,12 +37,23 @@ downloads, diffs the file lists, and selects only the files that are actually ne
 - Windows 10 version 1809 or later, or Windows 11, x64.
 - qBittorrent with the WebUI enabled, for the "add to qBittorrent" step. Comparing
   torrents works without it.
-- Nothing else: the release archive is self-contained and does not need the .NET
-  runtime or the Windows App Runtime installed.
+- Either the .NET 11 Desktop Runtime and the Windows App Runtime 2.6, or the
+  standalone archive, which bundles both.
 
 ## Install
 
-1. Download `tdt-<version>-windows-x64.zip` from
+Every release publishes two portable archives. Nothing is installed and nothing
+is written outside `%APPDATA%\Tdt`.
+
+| Archive | Download | Requires |
+| --- | --- | --- |
+| `tdt-<version>-windows-x64.zip` | about 26 MB | .NET 11 Desktop Runtime and Windows App Runtime 2.6 |
+| `tdt-<version>-windows-x64-standalone.zip` | about 90 MB | nothing else |
+
+Take the small archive if those two runtimes are already on the machine;
+otherwise take the standalone one.
+
+1. Download one of the two archives from
    [Releases](https://github.com/phnthnhnm/tdt/releases).
 2. Extract it anywhere, for example `%LOCALAPPDATA%\Programs\tdt`.
 3. Run `tdt.exe`.
@@ -132,16 +143,29 @@ Run the app:
 dotnet run --project src/Tdt.App
 ```
 
-Build the self-contained release archive:
+Build both release archives locally (replace `0.2.0` with the version you want
+stamped into the executable). Build the standalone one first:
 
 ```bash
 dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64 \
-  --self-contained -p:WindowsAppSDKSelfContained=true -o artifacts/publish
-cd artifacts/publish && 7z a -tzip -mx=9 ../tdt-<version>-windows-x64.zip *
+  --self-contained true -p:WindowsAppSDKSelfContained=true \
+  -p:Version=0.2.0 -o artifacts/standalone
+
+dotnet publish src/Tdt.App/Tdt.App.csproj -c Release -r win-x64 \
+  --self-contained false -p:WindowsAppSDKSelfContained=false \
+  -p:Version=0.2.0 -o artifacts/portable
 ```
 
-The archive is about 90 MB because it bundles the .NET and Windows App SDK
-runtimes so users need no prerequisites.
+The order matters: the two publish modes must not share an intermediate
+directory. A framework-dependent publish leaves a generated manifest behind that
+makes the next self-contained publish skip its WinRT registration, and the
+resulting app dies at startup. Either build the standalone first, or delete
+`src/Tdt.App/obj` between the two commands. CI and the release workflow publish
+each mode in its own job for this reason.
+
+The portable archive is small because it uses the runtimes installed on the
+machine; the standalone archive is about 90 MB because it bundles the .NET and
+Windows App SDK runtimes so users need no prerequisites.
 
 ### Layout
 
@@ -159,26 +183,31 @@ log.
 
 ## Release process
 
-Releases are automated with
-[release-please](https://github.com/googleapis/release-please):
+Releases are driven by tags. Pushing a tag that starts with `v` builds and
+publishes both archives:
 
-1. Merge Conventional Commits into `main`.
-2. Release Please opens (and keeps updating) a `chore(main): release X.Y.Z` pull
-   request that bumps `version.txt` and `Directory.Build.props` and updates
-   `CHANGELOG.md`.
-3. Merge that pull request. Release Please creates the `vX.Y.Z` tag and the
-   GitHub release.
-4. The published release triggers `.github/workflows/release.yml`, which builds
-   the tag, zips it as `tdt-<version>-windows-x64.zip` and uploads it to the
-   release.
+```bash
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
+```
 
-`RELEASE_PLEASE_TOKEN` must be configured as a repository secret. A release
-created with the default `GITHUB_TOKEN` does not trigger other workflows, so the
-build would never run. Until the secret exists the workflow falls back to
-`GITHUB_TOKEN`, which still opens the release pull request and creates the
-release, but that release does not start the build.
+`.github/workflows/release.yml` then:
 
-Never create tags or releases by hand.
+1. checks out the tag and stamps its version into the executable
+   (`-p:Version=0.2.0`),
+2. publishes the portable and the standalone build,
+3. verifies that both contain `tdt.exe` and `tdt.pri`,
+4. creates the GitHub release with generated notes if it does not exist yet, and
+   attaches `tdt-<version>-windows-x64.zip` and
+   `tdt-<version>-windows-x64-standalone.zip`.
+
+The workflow uses the built-in `GITHUB_TOKEN`, so no repository secret is
+needed. Re-running it for an existing tag replaces the assets. `ci.yml` builds
+both archives on every qualifying push to `main`, so a broken publish is caught
+before a tag is created.
+
+The tag is the only source of truth for the version; there is no version file to
+bump.
 
 ## Troubleshooting
 
@@ -191,6 +220,7 @@ Never create tags or releases by hand.
 | The torrent was added but everything is paused | That is intended: the app pauses and selects only the new files |
 | Nothing is selected | The added paths may be blacklisted, or the torrents differ only by root name |
 | SmartScreen blocks the app | The build is unsigned; use "More info" → "Run anyway" |
+| The small archive fails to start | Install the .NET 11 Desktop Runtime and Windows App Runtime 2.6, or use the standalone archive |
 | The app does not start | Run it from its own folder; the archive must be extracted, not run from inside the zip |
 
 ## License
