@@ -45,6 +45,12 @@ jobs:
         with:
           dotnet-version: "11.0.x"
 
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Restore
         run: dotnet restore tdt.slnx
 
@@ -87,6 +93,12 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "11.0.x"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Publish standalone build
         run: >

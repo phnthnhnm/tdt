@@ -19,6 +19,12 @@ jobs:
         with:
           dotnet-version: "11.0.x"
 
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Resolve version
         id: version
         shell: bash
@@ -63,6 +69,12 @@ jobs:
         with:
           dotnet-version: "11.0.x"
 
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Resolve version
         id: version
         shell: bash
@@ -102,11 +114,48 @@ jobs:
     needs: [portable, standalone]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v8
         with:
           pattern: archive-*
           merge-multiple: true
           path: dist
+
+      - name: Compose release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREVIOUS=$(git describe --tags --abbrev=0 --exclude "$GITHUB_REF_NAME" 2>/dev/null || true)
+          if [[ -n "$PREVIOUS" ]]; then
+            RANGE="$PREVIOUS..$GITHUB_REF_NAME"
+            FIRST_LINE="Changes since $PREVIOUS"
+            COMPARE="https://github.com/$GITHUB_REPOSITORY/compare/$PREVIOUS...$GITHUB_REF_NAME"
+          else
+            RANGE="$GITHUB_REF_NAME"
+            FIRST_LINE="Changes"
+            COMPARE=""
+          fi
+
+          {
+            echo "## $FIRST_LINE"
+            echo
+            git log --no-merges --pretty=format:'- %s' "$RANGE"
+            echo
+            echo
+            echo "### Downloads"
+            echo
+            echo "- \`tdt-${GITHUB_REF_NAME#v}-windows-x64.zip\` needs the .NET 11 Desktop Runtime and Windows App Runtime 2.6."
+            echo "- \`tdt-${GITHUB_REF_NAME#v}-windows-x64-standalone.zip\` needs nothing else."
+            if [[ -n "$COMPARE" ]]; then
+              echo
+              echo "**Full changelog**: $COMPARE"
+            fi
+          } > notes.md
+
+          cat notes.md
 
       - name: Create or update the release
         shell: bash
@@ -115,7 +164,10 @@ jobs:
         run: |
           set -euo pipefail
           ls -l dist
-          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-                 --title "$GITHUB_REF_NAME" --generate-notes
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" --notes-file notes.md
+          fi
           gh release upload "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --clobber
