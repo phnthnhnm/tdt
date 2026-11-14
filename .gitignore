@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+artifacts/
+publish/
+*.binlog
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+
+# Test and coverage output
+TestResults/
+coverage*.xml
+coverage*.json
+coverage*.info
+*.coverage
+
+# Publish output kept for local inspection
+build/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local secrets, never committed
+*.env
+.env
+secrets.json

@@ -1,0 +1,20 @@
+<Project>
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <Company>Phan Thanh Nam</Company>
+    <Authors>Phan Thanh Nam</Authors>
+    <Copyright>Copyright © 2026 Phan Thanh Nam</Copyright>
+    <Product>Torrent Diff Tool</Product>
+    <RepositoryUrl>https://github.com/phnthnhnm/tdt</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

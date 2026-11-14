@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Tdt.App</RootNamespace>
+    <AssemblyName>tdt</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!--
+      Enables the WinUI resource (PRI) tooling that publishes tdt.pri next to the
+      executable. Without it the published app starts and immediately fails in
+      Microsoft.UI.Xaml because the compiled XAML resources are missing.
+    -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!--
+      Development builds use the Windows App Runtime that is installed on the
+      machine. Release builds publish self-contained; see the publish command in
+      README.md and .github/workflows/release.yml.
+    -->
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <ApplicationIcon>Assets\tdt.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!--
+      MVVMTK0045 asks for partial observable properties so WinRT marshalling
+      works under NativeAOT. This app ships ReadyToRun/JIT and its view models
+      are not exposed to WinRT, so the field form is fine.
+    -->
+    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
+    <!-- Program.cs provides the entry point so the single instance check runs first. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tdt.Core\Tdt.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\tdt.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

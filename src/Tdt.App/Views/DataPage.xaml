@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Tdt.App.Views.DataPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls">
+
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="16">
+            <TextBlock Text="Data" Style="{StaticResource TitleTextBlockStyle}" />
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Data folder" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock
+                        Style="{StaticResource HintTextStyle}"
+                        Text="The folder holding the previously downloaded .torrent files. A new torrent is compared with the file of the same name in this folder." />
+                    <TextBlock
+                        Text="{x:Bind ViewModel.DataFolderDisplay, Mode=OneWay}"
+                        IsTextSelectionEnabled="True"
+                        TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button
+                            Content="Choose folder"
+                            Command="{x:Bind ViewModel.BrowseDataFolderCommand}"
+                            Style="{StaticResource AccentButtonStyle}" />
+                        <Button Content="Open" Command="{x:Bind ViewModel.OpenDataFolderCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Backup" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock
+                        Style="{StaticResource HintTextStyle}"
+                        Text="Backups are JSON copies of the settings file. Stored passwords and API keys stay encrypted for this Windows account." />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Backup settings" Command="{x:Bind ViewModel.BackupCommand}" />
+                        <Button Content="Restore settings" Command="{x:Bind ViewModel.RestoreCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Reset" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock
+                        Style="{StaticResource HintTextStyle}"
+                        Text="Deletes the data folder setting, the qBittorrent connection and the theme choice." />
+                    <Button Content="Reset all settings" Command="{x:Bind ViewModel.ResetAllCommand}" />
+                </StackPanel>
+            </Border>
+
+            <muxc:InfoBar
+                IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
+                Severity="Informational"
+                Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                IsClosable="False" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>
