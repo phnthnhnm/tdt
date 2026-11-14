@@ -2,35 +2,45 @@
 
 [![CI](https://github.com/phnthnhnm/tdt/actions/workflows/ci.yml/badge.svg)](https://github.com/phnthnhnm/tdt/actions/workflows/ci.yml)
 
-A Windows app that shows which files a new `.torrent` adds or removes compared
-with the archived torrent of the same release, then hands only the new files to
-qBittorrent.
+<img src="docs/logo.png" width="72" alt="Torrent Diff Tool" />
 
-![Comparing two torrents](docs/screenshots/diff.png)
+A Windows app that shows which files a new `.torrent` adds, removes or replaces
+compared with the archived torrent of the same release, then hands only the files
+that need downloading to qBittorrent.
+
+![Comparing a release with its archived torrent](docs/screenshots/diff.png)
 
 ![qBittorrent settings](docs/screenshots/settings.png)
 
 ## Why
 
-Releases get re-packaged with a few chapters added and a few removed. Downloading
-the whole torrent again wastes bandwidth and disk, and qBittorrent cannot compare
-two torrent files. Torrent Diff Tool keeps the old `.torrent` next to your
-downloads, diffs the file lists, and selects only the files that are actually new.
+Releases get re-packaged with a few chapters added, replaced or removed.
+Downloading everything again wastes bandwidth and disk, and qBittorrent cannot
+compare two torrent files. Torrent Diff Tool keeps the old `.torrent` next to
+your downloads, diffs the file lists, and selects only what actually changed.
 
 ## Features
 
-- File-level diff of two torrents: additions and removals side by side, in one
-  list with counts.
-- One command adds the new torrent to qBittorrent **paused** and selects only the
-  new files — everything else stays at priority 0.
-- Blacklist substrings (samples, extras, and so on) are never selected, and are
-  listed in the confirmation dialog.
-- qBittorrent authentication with a form login or a 5.2+ API key, HTTP or HTTPS.
-- System, light and dark themes, applied to every open window immediately.
+- Three-way file diff: **added**, **removed** and **changed** (same path,
+  different size), with sizes and deltas.
+- The archived torrent is found automatically: same file name first, then the
+  same torrent name in the data folder, so a browser download named
+  `release (1).torrent` still matches.
+- Drag a `.torrent` onto the window, or use Ctrl+O.
+- One command adds the release to qBittorrent **paused** and selects only the
+  added and changed files; everything else stays at priority 0.
+- Blacklist substrings (samples, extras, ...) are never selected and are listed
+  in the confirmation dialog.
+- **Test connection** in the settings checks the WebUI credentials before you
+  need them; API key (qBittorrent 5.2+) or form login, HTTP or HTTPS.
+- System, light and dark themes, including the title bar caption buttons.
 - Settings are a single JSON file; the qBittorrent password and API key are
   encrypted with Windows DPAPI before they touch disk.
-- Timestamped settings backup and restore.
-- Single instance per session; Windows 11 styling (Mica-free, standard title bar).
+- Timestamped settings backup and restore; a settings file that cannot be read is
+  kept beside the original instead of being overwritten.
+- Native Windows 11 look: Mica backdrop, custom title bar, standard settings
+  cards, remembered window size and position.
+- Single instance per session.
 
 ## Requirements
 
@@ -65,35 +75,36 @@ confirmation the first time. Choose "More info" and then "Run anyway".
 
 1. Open **Settings → Data** and choose the folder where you keep the previously
    downloaded `.torrent` files.
-2. Open **Settings → qBittorrent** and enter the WebUI host and port with either
-   the username and password or an API key. Save.
-3. Click **Browse…** and pick the new `.torrent`.
-4. Click **Compare torrents**. The list shows every added and removed file.
-5. If files were added, click **Add to qBittorrent (select new files)**, review
-   the confirmation, and confirm.
+2. Open **Settings → qBittorrent**, enter the WebUI host and port with either the
+   username and password or an API key, and press **Test connection**.
+3. Open the new `.torrent` with **Browse…**, Ctrl+O or drag and drop. The
+   comparison runs immediately.
+4. Review the changes, then press **Add to qBittorrent (paused)**.
 
-The old version is found by file name: the new `release.torrent` is compared with
-`<data folder>\release.torrent`. Keep the name of the torrent file when you save
-it.
+### Keyboard shortcuts
 
-### Blacklist
-
-Files whose torrent path contains a blacklisted substring are never selected.
-The default is empty; add entries such as `sample` or `extras` in
-**Settings → qBittorrent**. Matching is case-insensitive and applies to the full
-path inside the torrent.
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+O` | Browse for a torrent |
+| `Ctrl+Enter` | Compare again |
+| `Esc` | Clear the comparison |
 
 ## How the comparison works
 
-- A torrent entry is identified by its path: the torrent name followed by each
-  path segment. Two torrents with the same files but different root names
-  therefore diff as a complete replacement.
-- The diff is a set difference over those paths: additions are paths only in the
-  new torrent, removals are paths only in the old one. Both lists are sorted.
-- Equal paths with different sizes are not reported, and renames appear as one
-  removal plus one addition.
-- qBittorrent reports content paths that do not include the torrent root, so the
-  selection step matches added files by file name.
+- A file is identified by its path **relative to the torrent root**, so a release
+  that only renamed the root directory still compares cleanly.
+- Added files exist only in the new torrent, removed files only in the archived
+  one. A path present in both with a different size is a **change**: the release
+  replaced the file, so it is downloaded again.
+- Comparison is ordinal, so `001.CBZ` and `001.cbz` are different files.
+- The archived torrent is looked up by file name first. If that misses, the data
+  folder is scanned (up to 400 torrents, newest first) for a torrent with the same
+  root name and a different info hash.
+- The info hash is computed from the torrent, so the qBittorrent row is found
+  exactly even if two torrents share a display name.
+- qBittorrent reports content paths prefixed with the torrent root; the selection
+  strips the root and compares case-insensitively, which keeps sibling folders
+  such as `CD1/001.cbz` and `CD2/001.cbz` apart.
 
 ## Settings and data
 
@@ -112,15 +123,18 @@ Settings live in a single file:
 | `qbittorrent.apiKey` | 5.2+ API key; when set, form login is never used |
 | `qbittorrent.useHttps` | Use HTTPS for the WebUI |
 | `qbittorrent.blacklist` | Substrings that are never selected |
+| `window` | Last window size and position |
 
 The password and the API key are encrypted with DPAPI for the current Windows
 account, so a copied settings file cannot be read on another account or machine.
 For the same reason, restoring a backup on a different account keeps the other
 settings but requires the credentials to be entered again.
 
-**Settings → Data** can export the file to a timestamped JSON backup, restore it,
-or reset every setting. Restoring validates the file before it replaces the
-current settings.
+A settings file that cannot be read is **not** overwritten: it is moved aside as
+`settings.corrupt-<timestamp>.json` (or `settings.newer-<timestamp>.json` when it
+was written by a newer version) and the app starts with defaults. **Settings →
+Data** can export the file to a timestamped JSON backup, restore it, or reset
+every setting. Restoring validates the file before it replaces anything.
 
 ## Development
 
@@ -135,11 +149,6 @@ dotnet restore tdt.slnx
 dotnet build tdt.slnx -c Debug
 dotnet test tdt.slnx
 dotnet format tdt.slnx --verify-no-changes
-```
-
-Run the app:
-
-```bash
 dotnet run --project src/Tdt.App
 ```
 
@@ -163,23 +172,20 @@ resulting app dies at startup. Either build the standalone first, or delete
 `src/Tdt.App/obj` between the two commands. CI and the release workflow publish
 each mode in its own job for this reason.
 
-The portable archive is small because it uses the runtimes installed on the
-machine; the standalone archive is about 90 MB because it bundles the .NET and
-Windows App SDK runtimes so users need no prerequisites.
-
 ### Layout
 
 ```
 src/Tdt.Core      torrent parsing, diffing, qBittorrent client, settings
 src/Tdt.App       WinUI 3 UI, view models, platform services
 tests/            xUnit tests for Tdt.Core
-docs/screenshots  README images
+docs/             logo and README screenshots
 ```
 
-`Tdt.Core` has no UI dependency; the WinUI project only adds the views, the view
-models and the platform glue. All HTTP requests go through a handler that logs
-the method, URL and status only, never headers, so credentials cannot leak into a
-log.
+`Tdt.Core` has no UI dependency. It owns the bencode parser, the info hash, the
+three-way diff, the archived-torrent lookup, the qBittorrent client and session,
+and the settings store. The WinUI project adds the views, the view models and the
+platform glue. All HTTP requests go through a handler that logs the method, URL
+and status only, never headers, so credentials cannot leak into a log.
 
 ## Release process
 
@@ -195,33 +201,37 @@ git push origin v0.2.0
 
 1. checks out the tag and stamps its version into the executable
    (`-p:Version=0.2.0`),
-2. publishes the portable and the standalone build,
+2. publishes the portable and the standalone build in separate jobs,
 3. verifies that both contain `tdt.exe` and `tdt.pri`,
-4. creates the GitHub release with generated notes if it does not exist yet, and
-   attaches `tdt-<version>-windows-x64.zip` and
+4. creates the GitHub release with notes generated from the commits since the
+   previous tag, and attaches
+   `tdt-<version>-windows-x64.zip` and
    `tdt-<version>-windows-x64-standalone.zip`.
 
 The workflow uses the built-in `GITHUB_TOKEN`, so no repository secret is
-needed. Re-running it for an existing tag replaces the assets. `ci.yml` builds
-both archives on every qualifying push to `main`, so a broken publish is caught
-before a tag is created.
+needed. Re-running it for an existing tag rewrites the notes and replaces the
+assets. `ci.yml` builds both archives on every qualifying push to `main`, so a
+broken publish is caught before a tag is created. Dependabot opens weekly pull
+requests for NuGet packages and GitHub Actions.
 
 The tag is the only source of truth for the version; there is no version file to
-bump.
+bump. Tags are signed, so `git tag` needs `-a -m`.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
 | "Data folder not set in Settings" | Choose the folder in Settings → Data |
-| "No matching old torrent found in data folder" | The old `.torrent` must have the same file name and live in the configured folder |
+| "No archived torrent found for this release" | Put the old `.torrent` in the data folder; it matches by file name or by torrent name |
+| "The data folder does not exist" | The configured folder was moved or deleted; choose it again |
 | "qBittorrent settings not configured" | Enter the host and port in Settings → qBittorrent |
-| "qBittorrent error: qBittorrent login failed (403)" | Check the username and password, or use an API key |
-| The torrent was added but everything is paused | That is intended: the app pauses and selects only the new files |
-| Nothing is selected | The added paths may be blacklisted, or the torrents differ only by root name |
+| "qBittorrent error: qBittorrent login failed (403)" | Check the username and password, or use an API key; **Test connection** reports the same result |
+| The torrent was added but everything is paused | That is intended: the app pauses and selects only the changed files |
+| Nothing is selected | The changed paths may be blacklisted |
+| A file I did not expect is downloading | It changed size in the release, so it is treated as replaced |
 | SmartScreen blocks the app | The build is unsigned; use "More info" → "Run anyway" |
 | The small archive fails to start | Install the .NET 11 Desktop Runtime and Windows App Runtime 2.6, or use the standalone archive |
-| The app does not start | Run it from its own folder; the archive must be extracted, not run from inside the zip |
+| Settings were reset after a crash | The unreadable file was kept as `settings.corrupt-<timestamp>.json` in `%APPDATA%\Tdt` |
 
 ## License
 
