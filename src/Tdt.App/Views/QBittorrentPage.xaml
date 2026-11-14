@@ -3,16 +3,21 @@
     x:Class="Tdt.App.Views.QBittorrentPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:muxc="using:Microsoft.UI.Xaml.Controls">
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    Background="Transparent">
 
     <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="qBittorrent" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel MaxWidth="900" Padding="24,8,24,24" Spacing="8">
+            <TextBlock Margin="0,0,0,8" Style="{StaticResource TitleTextBlockStyle}" Text="qBittorrent" />
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="WebUI connection" Style="{StaticResource SectionHeaderStyle}" />
-                    <Grid ColumnDefinitions="*,120" ColumnSpacing="8">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="WebUI connection" />
+                    <TextBlock
+                        Style="{StaticResource HintTextStyle}"
+                        Text="Use a 5.2+ API key, or the username and password of the WebUI. The app only reads the torrent list and sets file priorities." />
+
+                    <Grid ColumnDefinitions="*,140" ColumnSpacing="8">
                         <TextBox
                             Header="Host"
                             PlaceholderText="127.0.0.1"
@@ -23,42 +28,69 @@
                             InputScope="Number"
                             Text="{x:Bind ViewModel.Port, Mode=TwoWay}" />
                     </Grid>
+
                     <TextBox Header="Username" Text="{x:Bind ViewModel.Username, Mode=TwoWay}" />
                     <PasswordBox Header="Password" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" />
                     <PasswordBox
-                        Header="API key (qBittorrent 5.2+)"
+                        Header="API key"
                         PlaceholderText="Optional; replaces the username and password"
                         Password="{x:Bind ViewModel.ApiKey, Mode=TwoWay}" />
-                    <ToggleSwitch
-                        Header="Use HTTPS"
-                        IsOn="{x:Bind ViewModel.UseHttps, Mode=TwoWay}" />
+                    <ToggleSwitch Header="Use HTTPS" IsOn="{x:Bind ViewModel.UseHttps, Mode=TwoWay}" />
+
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button
-                            Content="Save"
                             Command="{x:Bind ViewModel.SaveQBittorrentCommand}"
+                            Content="Save"
                             Style="{StaticResource AccentButtonStyle}" />
-                        <Button Content="Clear API key" Command="{x:Bind ViewModel.ClearApiKeyCommand}" />
+                        <Button
+                            Command="{x:Bind ViewModel.TestConnectionCommand}"
+                            Content="Test connection"
+                            IsEnabled="{x:Bind ViewModel.CanTestConnection, Mode=OneWay}" />
+                        <ProgressRing
+                            Width="16"
+                            Height="16"
+                            VerticalAlignment="Center"
+                            IsActive="{x:Bind ViewModel.IsTestingConnection, Mode=OneWay}" />
+                        <Button Command="{x:Bind ViewModel.ClearApiKeyCommand}" Content="Clear API key" />
                     </StackPanel>
+
+                    <muxc:InfoBar
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.HasQBittorrentError, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.QBittorrentError, Mode=OneWay}"
+                        Severity="Error" />
+                    <muxc:InfoBar
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.ShowConnectionSuccess, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.ConnectionResult, Mode=OneWay}"
+                        Severity="Success" />
+                    <muxc:InfoBar
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.ShowConnectionFailure, Mode=OneWay}"
+                        Message="{x:Bind ViewModel.ConnectionResult, Mode=OneWay}"
+                        Severity="Error" />
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Blacklist" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Blacklist" />
                     <TextBlock
                         Style="{StaticResource HintTextStyle}"
                         Text="Files whose path contains one of these substrings are never selected." />
+
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <TextBox
                             PlaceholderText="Add a substring"
                             Text="{x:Bind ViewModel.NewBlacklistEntry, Mode=TwoWay}" />
                         <Button
                             Grid.Column="1"
-                            Content="Add"
-                            Command="{x:Bind ViewModel.AddBlacklistEntryCommand}" />
+                            Command="{x:Bind ViewModel.AddBlacklistEntryCommand}"
+                            Content="Add" />
                     </Grid>
+
                     <ListView
-                        MaxHeight="220"
+                        MaxHeight="240"
                         ItemsSource="{x:Bind ViewModel.Blacklist}"
                         SelectionMode="None">
                         <ListView.ItemTemplate>
@@ -66,13 +98,13 @@
                                 <Grid Padding="0,4" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                     <TextBlock
                                         VerticalAlignment="Center"
-                                        Text="{x:Bind}"
-                                        IsTextSelectionEnabled="True" />
+                                        IsTextSelectionEnabled="True"
+                                        Text="{x:Bind}" />
                                     <Button
                                         Grid.Column="1"
+                                        Click="OnRemoveBlacklistEntryClick"
                                         Content="Remove"
-                                        Tag="{x:Bind}"
-                                        Click="OnRemoveBlacklistEntryClick" />
+                                        Tag="{x:Bind}" />
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -81,10 +113,10 @@
             </Border>
 
             <muxc:InfoBar
+                IsClosable="False"
                 IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
-                Severity="Informational"
                 Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                IsClosable="False" />
+                Severity="Informational" />
         </StackPanel>
     </ScrollViewer>
 </Page>

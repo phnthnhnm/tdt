@@ -293,21 +293,16 @@ public sealed class QBittorrentClientTests
 
         Assert.Contains("400", error.Message, StringComparison.Ordinal);
     }
-
     [Fact]
-    public async Task StartsAndStopsTorrents()
+    public async Task StopsTorrents()
     {
         var (client, handler) = Create(_ => StubResponses.Empty());
 
-        await client.StartAsync(Connection, "abc");
-        Assert.Equal("/api/v2/torrents/start", handler.LastRequest.Path);
-        Assert.Equal("hashes=abc", handler.LastRequest.Body);
-
         await client.StopAsync(Connection, "abc");
+
         Assert.Equal("/api/v2/torrents/stop", handler.LastRequest.Path);
         Assert.Equal("hashes=abc", handler.LastRequest.Body);
     }
-
     [Fact]
     public async Task ReportsAFailedStop()
     {

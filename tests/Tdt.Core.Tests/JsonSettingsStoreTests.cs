@@ -30,6 +30,14 @@ public sealed class JsonSettingsStoreTests : IDisposable
         return new JsonSettingsStore(_directory, protector ?? new PlaintextSecretProtector());
     }
 
+    private string WriteRawSettings(string json)
+    {
+        var store = CreateStore();
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(store.FilePath, json);
+        return store.FilePath;
+    }
+
     [Fact]
     public void ReturnsDefaultsWhenNoFileExists()
     {
@@ -39,8 +47,10 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(AppTheme.System, settings.Theme);
         Assert.Equal(string.Empty, settings.DataFolder);
-        Assert.Equal(8080, settings.QBittorrent.Port);
+        Assert.Equal(QBittorrentSettings.DefaultPort, settings.QBittorrent.Port);
         Assert.Empty(settings.QBittorrent.Blacklist);
+        Assert.False(settings.Window.HasBounds);
+        Assert.Null(store.LastLoadWarning);
         Assert.False(File.Exists(store.FilePath));
     }
 
@@ -53,6 +63,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         {
             Theme = AppTheme.Dark,
             DataFolder = @"C:\Torrents\old",
+            Window = new WindowPlacement { Width = 1200, Height = 800, X = 40, Y = 60 },
             QBittorrent = new QBittorrentSettings
             {
                 Host = "seedbox.local",
@@ -69,6 +80,9 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(AppTheme.Dark, loaded.Theme);
         Assert.Equal(@"C:\Torrents\old", loaded.DataFolder);
+        Assert.Equal(1200, loaded.Window.Width);
+        Assert.Equal(60, loaded.Window.Y);
+        Assert.True(loaded.Window.HasBounds);
         Assert.Equal("seedbox.local", loaded.QBittorrent.Host);
         Assert.Equal(9091, loaded.QBittorrent.Port);
         Assert.Equal("admin", loaded.QBittorrent.Username);
@@ -101,30 +115,73 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void ReturnsDefaultsForMalformedJson()
+    public void SetsAsideMalformedJsonInsteadOfOverwritingIt()
     {
         var store = CreateStore();
-        Directory.CreateDirectory(_directory);
-        File.WriteAllText(store.FilePath, "{ this is not json");
+        var path = WriteRawSettings("{ this is not json");
 
         var settings = store.Load();
 
         Assert.Equal(AppTheme.System, settings.Theme);
-        Assert.Equal(8080, settings.QBittorrent.Port);
+        Assert.NotNull(store.LastLoadWarning);
+        Assert.Contains("copy was kept", store.LastLoadWarning, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(path));
+        var quarantined = Assert.Single(Directory.GetFiles(_directory, "settings.corrupt-*.json"));
+        Assert.Contains("this is not json", File.ReadAllText(quarantined), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetsAsideAFileFromANewerSchema()
+    {
+        var store = CreateStore();
+        var path = WriteRawSettings("""{"version": 99, "theme": "Dark"}""");
+
+        var settings = store.Load();
+
+        Assert.Equal(AppTheme.System, settings.Theme);
+        Assert.NotNull(store.LastLoadWarning);
+        Assert.Contains("newer version", store.LastLoadWarning, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(path));
+        Assert.Single(Directory.GetFiles(_directory, "settings.newer-*.json"));
+    }
+
+    [Fact]
+    public void RepairsExplicitNulls()
+    {
+        var store = CreateStore();
+        WriteRawSettings("""{"dataFolder": null, "qbittorrent": null, "window": null}""");
+
+        var settings = store.Load();
+
+        Assert.Equal(string.Empty, settings.DataFolder);
+        Assert.NotNull(settings.QBittorrent);
+        Assert.NotNull(settings.Window);
+        Assert.Null(store.LastLoadWarning);
+    }
+
+    [Fact]
+    public void DropsNullOrEmptyBlacklistEntries()
+    {
+        var store = CreateStore();
+        WriteRawSettings("""{"qbittorrent": {"blacklist": [null, "", "sample"]}}""");
+
+        var settings = store.Load();
+
+        Assert.Null(store.LastLoadWarning);
+        Assert.Equal(["sample"], settings.QBittorrent.Blacklist);
     }
 
     [Fact]
     public void KeepsDefaultsForMissingProperties()
     {
         var store = CreateStore();
-        Directory.CreateDirectory(_directory);
-        File.WriteAllText(store.FilePath, """{"theme":"Dark"}""");
+        WriteRawSettings("""{"theme":"Dark"}""");
 
         var settings = store.Load();
 
         Assert.Equal(AppTheme.Dark, settings.Theme);
-        Assert.Equal(8080, settings.QBittorrent.Port);
-        Assert.Empty(settings.QBittorrent.Host);
+        Assert.Equal(QBittorrentSettings.DefaultPort, settings.QBittorrent.Port);
+        Assert.Equal(string.Empty, settings.QBittorrent.Host);
     }
 
     [Fact]

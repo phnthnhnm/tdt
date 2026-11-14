@@ -3,60 +3,90 @@
     x:Class="Tdt.App.Views.DataPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:muxc="using:Microsoft.UI.Xaml.Controls">
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    Background="Transparent">
 
     <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="Data" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel MaxWidth="900" Padding="24,8,24,24" Spacing="8">
+            <TextBlock Margin="0,0,0,8" Style="{StaticResource TitleTextBlockStyle}" Text="Data" />
+
+            <muxc:InfoBar
+                IsClosable="False"
+                IsOpen="{x:Bind ViewModel.HasSettingsWarning, Mode=OneWay}"
+                Message="{x:Bind ViewModel.SettingsWarning, Mode=OneWay}"
+                Severity="Warning"
+                Title="Settings were reset" />
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Data folder" Style="{StaticResource SectionHeaderStyle}" />
-                    <TextBlock
-                        Style="{StaticResource HintTextStyle}"
-                        Text="The folder holding the previously downloaded .torrent files. A new torrent is compared with the file of the same name in this folder." />
-                    <TextBlock
-                        Text="{x:Bind ViewModel.DataFolderDisplay, Mode=OneWay}"
-                        IsTextSelectionEnabled="True"
-                        TextWrapping="Wrap" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button
-                            Content="Choose folder"
-                            Command="{x:Bind ViewModel.BrowseDataFolderCommand}"
-                            Style="{StaticResource AccentButtonStyle}" />
-                        <Button Content="Open" Command="{x:Bind ViewModel.OpenDataFolderCommand}" />
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Data folder" />
+                            <TextBlock
+                                Style="{StaticResource HintTextStyle}"
+                                Text="Where the archived .torrent files live. A release is compared with the archived torrent that has the same file name, or the same root name." />
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                IsTextSelectionEnabled="True"
+                                Text="{x:Bind ViewModel.DataFolderDisplay, Mode=OneWay}"
+                                TextTrimming="CharacterEllipsis"
+                                ToolTipService.ToolTip="{x:Bind ViewModel.DataFolderDisplay, Mode=OneWay}" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <Button
+                                Command="{x:Bind ViewModel.BrowseDataFolderCommand}"
+                                Content="Choose folder"
+                                Style="{StaticResource AccentButtonStyle}" />
+                            <Button Command="{x:Bind ViewModel.OpenDataFolderCommand}" Content="Open" />
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource CardBorderStyle}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Backup" Style="{StaticResource SectionHeaderStyle}" />
-                    <TextBlock
-                        Style="{StaticResource HintTextStyle}"
-                        Text="Backups are JSON copies of the settings file. Stored passwords and API keys stay encrypted for this Windows account." />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Backup settings" Command="{x:Bind ViewModel.BackupCommand}" />
-                        <Button Content="Restore settings" Command="{x:Bind ViewModel.RestoreCommand}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Backup" />
+                        <TextBlock
+                            Style="{StaticResource HintTextStyle}"
+                            Text="The backup is a copy of the settings file. Passwords and API keys stay encrypted for this Windows account, so a backup restored on another account needs the credentials again." />
                     </StackPanel>
-                </StackPanel>
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button Command="{x:Bind ViewModel.BackupCommand}" Content="Backup" />
+                        <Button Command="{x:Bind ViewModel.RestoreCommand}" Content="Restore" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <Border Style="{StaticResource CardBorderStyle}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Reset" Style="{StaticResource SectionHeaderStyle}" />
-                    <TextBlock
-                        Style="{StaticResource HintTextStyle}"
-                        Text="Deletes the data folder setting, the qBittorrent connection and the theme choice." />
-                    <Button Content="Reset all settings" Command="{x:Bind ViewModel.ResetAllCommand}" />
-                </StackPanel>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Reset" />
+                        <TextBlock
+                            Style="{StaticResource HintTextStyle}"
+                            Text="Deletes the data folder, the qBittorrent connection, the blacklist and the theme choice." />
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Command="{x:Bind ViewModel.ResetAllCommand}"
+                        Content="Reset all settings" />
+                </Grid>
             </Border>
 
             <muxc:InfoBar
+                IsClosable="False"
                 IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
-                Severity="Informational"
                 Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                IsClosable="False" />
+                Severity="Informational" />
         </StackPanel>
     </ScrollViewer>
 </Page>

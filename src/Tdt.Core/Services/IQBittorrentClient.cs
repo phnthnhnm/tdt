@@ -42,11 +42,6 @@ public interface IQBittorrentClient
         int priority,
         CancellationToken cancellationToken = default);
 
-    Task StartAsync(
-        QBittorrentConnection connection,
-        string hashes,
-        CancellationToken cancellationToken = default);
-
     Task StopAsync(
         QBittorrentConnection connection,
         string hashes,

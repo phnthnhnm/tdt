@@ -11,7 +11,7 @@ public interface IDialogService
 
     Task ShowMessageAsync(string title, string message);
 
-    Task<bool> ConfirmAddTorrentAsync(TorrentAddPreview preview);
+    Task<bool> ConfirmAddTorrentAsync(TorrentAddPlan plan);
 }
 
 /// <summary>
@@ -56,36 +56,58 @@ public sealed class DialogService : IDialogService
         await dialog.ShowAsync();
     }
 
-    public async Task<bool> ConfirmAddTorrentAsync(TorrentAddPreview preview)
+    public async Task<bool> ConfirmAddTorrentAsync(TorrentAddPlan plan)
     {
-        ArgumentNullException.ThrowIfNull(preview);
+        ArgumentNullException.ThrowIfNull(plan);
 
         var panel = new StackPanel { Spacing = 12 };
+
         panel.Children.Add(new TextBlock
         {
-            Text = $"Add torrent \"{preview.TorrentName}\" to qBittorrent and select {preview.SelectableCount} new file(s)?",
+            Text = $"Add \"{plan.Torrent.Name}\" to qBittorrent?",
+            Style = (Style)Application.Current.Resources["SubtitleTextBlockStyle"],
             TextWrapping = TextWrapping.Wrap,
         });
 
-        if (preview.IgnoredFiles.Count > 0)
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{plan.SelectedCount} file(s) will be selected and the torrent is added paused.",
+            TextWrapping = TextWrapping.Wrap,
+        });
+
+        if (plan.SelectedFiles.Count > 0)
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "Ignored files (match the blacklist):",
+                Text = "Selected files",
                 FontWeight = FontWeights.SemiBold,
             });
-
-            var list = new ListView
-            {
-                Height = 160,
-                SelectionMode = ListViewSelectionMode.None,
-                ItemsSource = preview.IgnoredFiles,
-            };
-            panel.Children.Add(list);
+            panel.Children.Add(CreatePathList(plan.SelectedFiles, 140));
         }
 
-        var dialog = CreateDialog("Confirm add to qBittorrent", panel, "Add", "Cancel");
+        if (plan.IgnoredFiles.Count > 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Ignored by the blacklist",
+                FontWeight = FontWeights.SemiBold,
+            });
+            panel.Children.Add(CreatePathList(plan.IgnoredFiles, 90));
+        }
+
+        var dialog = CreateDialog("Add to qBittorrent", new ScrollViewer { Content = panel }, "Add", "Cancel");
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private static ListView CreatePathList(IReadOnlyList<string> paths, double height)
+    {
+        return new ListView
+        {
+            MaxHeight = height,
+            SelectionMode = ListViewSelectionMode.None,
+            ItemsSource = paths,
+            ItemTemplate = (DataTemplate)Application.Current.Resources["PathTemplate"],
+        };
     }
 
     private ContentDialog CreateDialog(

@@ -2,34 +2,52 @@
 <Page
     x:Class="Tdt.App.Views.AboutPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
 
     <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="About" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel MaxWidth="900" Padding="24,8,24,24" Spacing="8">
+            <TextBlock Margin="0,0,0,8" Style="{StaticResource TitleTextBlockStyle}" Text="About" />
 
             <Border Style="{StaticResource CardBorderStyle}">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Torrent Diff Tool" Style="{StaticResource SubtitleTextBlockStyle}" />
-                    <TextBlock Text="{x:Bind ViewModel.VersionText}" />
-                    <TextBlock Style="{StaticResource HintTextStyle}" Text="{x:Bind ViewModel.CopyrightText}" />
-                    <TextBlock
-                        Style="{StaticResource HintTextStyle}"
-                        Text="Compares the file list of a new torrent with the archived torrent of the same name, then opens only the new files in qBittorrent." />
-                </StackPanel>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                    <Image
+                        Width="48"
+                        Height="48"
+                        VerticalAlignment="Top"
+                        Source="ms-appx:///Assets/tdt-logo.png" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Torrent Diff Tool" />
+                        <TextBlock Text="{x:Bind ViewModel.VersionText}" />
+                        <TextBlock Style="{StaticResource HintTextStyle}" Text="{x:Bind ViewModel.CopyrightText}" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            Style="{StaticResource HintTextStyle}"
+                            Text="Compares the file list of a release with the archived torrent of the same release and opens only the files that need downloading in qBittorrent." />
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Settings file" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Settings file" />
                     <TextBlock
+                        IsTextSelectionEnabled="True"
                         Text="{x:Bind ViewModel.SettingsPath}"
-                        TextWrapping="Wrap"
-                        IsTextSelectionEnabled="True" />
+                        TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Open settings folder" Command="{x:Bind ViewModel.OpenSettingsFolderCommand}" />
-                        <Button Content="Source code" Command="{x:Bind ViewModel.OpenSourceCommand}" />
+                        <Button Command="{x:Bind ViewModel.OpenSettingsFolderCommand}" Content="Open settings folder" />
+                        <Button Command="{x:Bind ViewModel.OpenSourceCommand}" Content="Source code" />
                     </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Keyboard shortcuts" />
+                    <TextBlock Style="{StaticResource HintTextStyle}" Text="Ctrl+O  Browse for a torrent" />
+                    <TextBlock Style="{StaticResource HintTextStyle}" Text="Ctrl+Enter  Compare again" />
+                    <TextBlock Style="{StaticResource HintTextStyle}" Text="Esc  Clear the comparison" />
                 </StackPanel>
             </Border>
         </StackPanel>

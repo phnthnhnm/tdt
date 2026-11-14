@@ -2,18 +2,19 @@
 <Page
     x:Class="Tdt.App.Views.AppearancePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
 
     <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="Appearance" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel MaxWidth="900" Padding="24,8,24,24" Spacing="8">
+            <TextBlock Margin="0,0,0,8" Style="{StaticResource TitleTextBlockStyle}" Text="Appearance" />
 
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Theme" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Theme" />
                     <TextBlock
                         Style="{StaticResource HintTextStyle}"
-                        Text="Applies to every open window immediately." />
+                        Text="Applies to every open window immediately. System follows the Windows app theme." />
                     <RadioButtons SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}">
                         <RadioButton Content="Use the Windows setting" />
                         <RadioButton Content="Light" />

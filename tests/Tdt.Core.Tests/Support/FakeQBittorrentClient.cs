@@ -21,6 +21,10 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
 
     public List<(string Hash, IReadOnlyCollection<int> Indexes, int Priority)> PriorityCalls { get; } = [];
 
+    public List<string> LoginCalls { get; } = [];
+
+    public List<string> BypassCalls { get; } = [];
+
     public byte[]? AddedBytes { get; private set; }
 
     public bool? AddedPaused { get; private set; }
@@ -28,8 +32,6 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
     public string? AddedSavePath { get; private set; }
 
     public int StopCalls { get; private set; }
-
-    public int StopCallsBeforeFiles { get; private set; }
 
     public int TorrentPolls { get; private set; }
 
@@ -44,6 +46,7 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
         string password,
         CancellationToken cancellationToken = default)
     {
+        LoginCalls.Add(username);
         return Task.CompletedTask;
     }
 
@@ -76,7 +79,6 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
         string hash,
         CancellationToken cancellationToken = default)
     {
-        StopCallsBeforeFiles = StopCalls;
         return Task.FromResult<IReadOnlyList<QBittorrentFileEntry>>(Files);
     }
 
@@ -88,14 +90,6 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
         CancellationToken cancellationToken = default)
     {
         PriorityCalls.Add((hash, fileIndexes, priority));
-        return Task.CompletedTask;
-    }
-
-    public Task StartAsync(
-        QBittorrentConnection connection,
-        string hashes,
-        CancellationToken cancellationToken = default)
-    {
         return Task.CompletedTask;
     }
 
@@ -114,6 +108,7 @@ internal sealed class FakeQBittorrentClient : IQBittorrentClient
         QBittorrentConnection connection,
         CancellationToken cancellationToken = default)
     {
+        BypassCalls.Add("called");
         return Task.FromResult(false);
     }
 }

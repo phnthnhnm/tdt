@@ -1,20 +1,23 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using Tdt.Core.Models;
 
 namespace Tdt.Core.Torrent;
 
 /// <summary>
-/// Reads the parts of a torrent metainfo file this app needs: the torrent name
-/// and the file list.
+/// Reads the parts of a torrent metainfo file this app needs: the torrent name,
+/// its info hash and the file list.
 /// </summary>
 /// <remarks>
-/// File paths are reported the way the previous implementation reported them:
-/// the torrent name followed by each path segment, joined with the platform
-/// directory separator. Two torrents with different names therefore diff as a
-/// complete replacement, which is why the app pairs a new torrent with the
-/// archived copy that has the same file name.
+/// File paths are stored relative to the torrent root. A torrent whose root
+/// directory was renamed between releases therefore still compares cleanly.
 /// </remarks>
 public static class TorrentParser
 {
+    [SuppressMessage(
+        "Security",
+        "CA5350:Do Not Use Weak Cryptographic Algorithms",
+        Justification = "BitTorrent v1 identifies a torrent by the SHA-1 of its info dictionary.")]
     public static TorrentInfo Parse(byte[] data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -37,7 +40,13 @@ public static class TorrentParser
         }
 
         var files = ReadFiles(info, name);
-        return new TorrentInfo(name, files, files.Sum(file => file.Length));
+        var infoHash = SHA1.HashData(data.AsSpan(info.Start, info.Length));
+
+        return new TorrentInfo(
+            name,
+            Convert.ToHexStringLower(infoHash),
+            files,
+            files.Sum(file => file.Length));
     }
 
     private static List<TorrentFileEntry> ReadFiles(BencodeDictionary info, string name)
@@ -76,7 +85,7 @@ public static class TorrentParser
                 ?? throw new TorrentFormatException(
                     $"Torrent is missing required field: info.files[{i}].length");
             var segments = ReadPathSegments(file, i);
-            files.Add(new TorrentFileEntry(BuildPath(name, segments), length));
+            files.Add(new TorrentFileEntry(BuildRelativePath(segments), length));
         }
 
         return files;
@@ -106,17 +115,11 @@ public static class TorrentParser
         return segments;
     }
 
-    private static string BuildPath(string name, List<string> segments)
+    private static string BuildRelativePath(List<string> segments)
     {
-        if (segments.Count == 0)
-        {
-            return name;
-        }
-
-        var parts = new string[segments.Count + 1];
-        parts[0] = name;
-        segments.CopyTo(parts, 1);
-        return string.Join(Path.DirectorySeparatorChar, parts);
+        return segments.Count == 0
+            ? string.Empty
+            : string.Join(Path.DirectorySeparatorChar, segments);
     }
 
     private static BencodeValue? Lookup(BencodeDictionary dictionary, string key)

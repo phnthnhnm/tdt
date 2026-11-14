@@ -200,14 +200,6 @@ public sealed class QBittorrentClient : IQBittorrentClient
         EnsureOk(response, "Failed to set file priority");
     }
 
-    public Task StartAsync(
-        QBittorrentConnection connection,
-        string hashes,
-        CancellationToken cancellationToken = default)
-    {
-        return SendHashesAsync(connection, "/api/v2/torrents/start", hashes, "Failed to start torrent(s)", cancellationToken);
-    }
-
     public Task StopAsync(
         QBittorrentConnection connection,
         string hashes,

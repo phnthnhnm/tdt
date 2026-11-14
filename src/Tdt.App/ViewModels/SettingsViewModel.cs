@@ -8,12 +8,13 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using Tdt.App.Services;
 using Tdt.Core.Models;
+using Tdt.Core.Services;
 
 namespace Tdt.App.ViewModels;
 
 /// <summary>
 /// Backs the settings window. Section changes are saved immediately, except the
-/// qBittorrent connection, which has an explicit save button.
+/// qBittorrent connection, which has an explicit save and test button.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -40,6 +41,18 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<string> Blacklist { get; } = [];
 
+    public string SettingsPath => _services.SettingsStore.FilePath;
+
+    public string VersionText { get; } = ReadVersion();
+
+    public string CopyrightText { get; } =
+        string.Create(CultureInfo.InvariantCulture, $"Copyright © {DateTime.Now.Year} Phan Thanh Nam");
+
+    /// <summary>Why the settings fell back to defaults, shown on the Data page.</summary>
+    public string? SettingsWarning => _services.SettingsWarning;
+
+    public bool HasSettingsWarning => !string.IsNullOrEmpty(SettingsWarning);
+
     [ObservableProperty]
     private int _themeIndex;
 
@@ -50,7 +63,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string _host = string.Empty;
 
     [ObservableProperty]
-    private string _port = "8080";
+    private string _port = string.Empty;
 
     [ObservableProperty]
     private string _username = string.Empty;
@@ -71,16 +84,36 @@ public sealed partial class SettingsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     private string? _statusMessage;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasQBittorrentError))]
+    private string? _qBittorrentError;
+
+    [ObservableProperty]
+    private bool _isTestingConnection;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasConnectionResult))]
+    private string? _connectionResult;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConnectionSucceeded))]
+    private bool _connectionFailed;
+
     public bool HasStatus => !string.IsNullOrEmpty(StatusMessage);
 
-    public string SettingsPath => _services.SettingsStore.FilePath;
+    public bool HasQBittorrentError => !string.IsNullOrEmpty(QBittorrentError);
+
+    public bool HasConnectionResult => !string.IsNullOrEmpty(ConnectionResult);
+
+    /// <summary>Drives the severity of the connection result info bar.</summary>
+    public bool ConnectionSucceeded => HasConnectionResult && !ConnectionFailed;
+    public bool ShowConnectionSuccess => HasConnectionResult && !ConnectionFailed;
+    public bool ShowConnectionFailure => HasConnectionResult && ConnectionFailed;
+    public bool CanTestConnection => !IsTestingConnection;
+
+
 
     public string DataFolderDisplay => string.IsNullOrEmpty(DataFolder) ? "Not set" : DataFolder;
-
-    public string VersionText { get; } = ReadVersion();
-
-    public string CopyrightText { get; } =
-        string.Create(CultureInfo.InvariantCulture, $"Copyright © {DateTime.Now.Year} Phan Thanh Nam");
 
     partial void OnThemeIndexChanged(int value)
     {
@@ -125,14 +158,58 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void SaveQBittorrent()
     {
-        Persist(settings => settings.QBittorrent = BuildQBittorrent(), "qBittorrent settings saved");
+        if (!TryBuildQBittorrent(out var settings, out var error))
+        {
+            QBittorrentError = error;
+            return;
+        }
+
+        QBittorrentError = null;
+        Persist(stored => stored.QBittorrent = settings, "qBittorrent settings saved");
     }
 
     [RelayCommand]
     private void ClearApiKey()
     {
         ApiKey = string.Empty;
-        Persist(settings => settings.QBittorrent = BuildQBittorrent(), "API key cleared");
+        SaveQBittorrent();
+    }
+
+    [RelayCommand]
+    private async Task TestConnectionAsync()
+    {
+        if (!TryBuildQBittorrent(out var settings, out var error))
+        {
+            QBittorrentError = error;
+            return;
+        }
+
+        QBittorrentError = null;
+        ConnectionResult = null;
+        ConnectionFailed = false;
+        IsTestingConnection = true;
+
+        try
+        {
+            var count = await QBittorrentSession.TestAsync(_services.QBittorrent, settings);
+            ConnectionResult = string.Create(
+                CultureInfo.InvariantCulture,
+                $"Connected. {count} torrent(s) found.");
+            ConnectionFailed = false;
+        }
+        catch (Exception ex) when (
+            ex is QBittorrentException
+                or HttpRequestException
+                or TaskCanceledException
+                or InvalidOperationException)
+        {
+            ConnectionResult = ex.Message;
+            ConnectionFailed = true;
+        }
+        finally
+        {
+            IsTestingConnection = false;
+        }
     }
 
     [RelayCommand]
@@ -173,7 +250,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         try
         {
-            PersistQBittorrentOnly();
+            // Save the visible form first so the backup matches the window.
+            if (TryBuildQBittorrent(out var settings, out _))
+            {
+                Persist(stored => stored.QBittorrent = settings);
+            }
+
             _services.SettingsStore.Export(path);
             StatusMessage = $"Backup saved to {Path.GetFileName(path)}";
         }
@@ -260,22 +342,38 @@ public sealed partial class SettingsViewModel : ObservableObject
         Process.Start(new ProcessStartInfo { FileName = directory, UseShellExecute = true });
     }
 
-    private static string ReadVersion()
+    private bool TryBuildQBittorrent(
+        out QBittorrentSettings settings,
+        out string? error)
     {
-        // MinVer stamps the full version into InformationalVersion and leaves
-        // AssemblyVersion at major.0.0.0, so this is the property to show.
-        var informational = typeof(SettingsViewModel).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
+        settings = new QBittorrentSettings();
+        error = null;
 
-        if (string.IsNullOrEmpty(informational))
+        if (string.IsNullOrWhiteSpace(Host))
         {
-            return "0.0.0";
+            error = "Enter the host of the qBittorrent WebUI.";
+            return false;
         }
 
-        // Drop build metadata such as "1.2.3+abc123".
-        var metadata = informational.IndexOf('+', StringComparison.Ordinal);
-        return metadata < 0 ? informational : informational[..metadata];
+        if (!int.TryParse(Port, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port) ||
+            port is < 1 or > 65535)
+        {
+            error = "The port must be a number between 1 and 65535.";
+            return false;
+        }
+
+        settings = new QBittorrentSettings
+        {
+            Host = Host.Trim(),
+            Port = port,
+            Username = Username,
+            Password = Password,
+            ApiKey = ApiKey,
+            UseHttps = UseHttps,
+            Blacklist = [.. Blacklist],
+        };
+
+        return true;
     }
 
     private void Persist(Action<AppSettings> mutate, string? status = null)
@@ -295,28 +393,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             StatusMessage = $"Could not save settings: {ex.Message}";
         }
-    }
-
-    /// <summary>Saves the qBittorrent tab before a backup, so the file matches the window.</summary>
-    private void PersistQBittorrentOnly()
-    {
-        Persist(settings => settings.QBittorrent = BuildQBittorrent());
-    }
-
-    private QBittorrentSettings BuildQBittorrent()
-    {
-        return new QBittorrentSettings
-        {
-            Host = Host.Trim(),
-            Port = int.TryParse(Port, NumberStyles.Integer, CultureInfo.InvariantCulture, out var port)
-                ? port
-                : 8080,
-            Username = Username,
-            Password = Password,
-            ApiKey = ApiKey,
-            UseHttps = UseHttps,
-            Blacklist = [.. Blacklist],
-        };
     }
 
     private void LoadFromSettings()
@@ -341,6 +417,26 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         _loading = false;
         OnPropertyChanged(nameof(DataFolderDisplay));
+        OnPropertyChanged(nameof(SettingsWarning));
+        OnPropertyChanged(nameof(HasSettingsWarning));
+    }
+
+    private static string ReadVersion()
+    {
+        // MinVer stamps the full version into InformationalVersion and leaves
+        // AssemblyVersion at major.0.0.0, so this is the property to show.
+        var informational = typeof(SettingsViewModel).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informational))
+        {
+            return "0.0.0";
+        }
+
+        // Drop build metadata such as "1.2.3+abc123".
+        var metadata = informational.IndexOf('+', StringComparison.Ordinal);
+        return metadata < 0 ? informational : informational[..metadata];
     }
 
     private static AppSettings Clone(AppSettings source)
@@ -350,6 +446,13 @@ public sealed partial class SettingsViewModel : ObservableObject
             Version = source.Version,
             Theme = source.Theme,
             DataFolder = source.DataFolder,
+            Window = new WindowPlacement
+            {
+                Width = source.Window.Width,
+                Height = source.Window.Height,
+                X = source.Window.X,
+                Y = source.Window.Y,
+            },
             QBittorrent = new QBittorrentSettings
             {
                 Host = source.QBittorrent.Host,

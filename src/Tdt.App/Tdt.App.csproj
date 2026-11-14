@@ -48,6 +48,8 @@
 
   <ItemGroup>
     <Content Include="Assets\tdt.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\tdt-32.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\tdt-logo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

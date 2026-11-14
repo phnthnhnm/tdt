@@ -6,100 +6,149 @@
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:services="using:Tdt.App.Services"
     xmlns:viewModels="using:Tdt.App.ViewModels"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    AllowDrop="True"
+    Background="Transparent"
+    DragEnter="OnDragEnter"
+    DragLeave="OnDragLeave"
+    DragOver="OnDragOver"
+    Drop="OnDrop">
 
-    <Grid Padding="24" RowSpacing="16" RowDefinitions="Auto,Auto,*,Auto">
+    <Grid x:Name="RootGrid" Padding="24,16,24,24" RowSpacing="12" RowDefinitions="Auto,*,Auto">
 
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-            <StackPanel Spacing="2" VerticalAlignment="Center">
-                <TextBlock Text="Torrent Diff Tool" Style="{StaticResource TitleTextBlockStyle}" />
-                <TextBlock
-                    Style="{StaticResource HintTextStyle}"
-                    Text="Compare a new torrent with the archived copy and open only the new files in qBittorrent." />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Button Content="Report a bug" Click="OnReportBugClick" />
-                <Button Content="Settings" Click="OnSettingsClick" />
-            </StackPanel>
-        </Grid>
-
-        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+        <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
             <StackPanel Spacing="12">
-                <TextBlock Text="New torrent" Style="{StaticResource SectionHeaderStyle}" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Release torrent" />
+                        <TextBlock
+                            Style="{StaticResource HintTextStyle}"
+                            Text="Open or drop the new .torrent. The archived torrent of the same release is found in the data folder." />
+                    </StackPanel>
+                    <StackPanel
+                        Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Top">
+                        <Button Content="Report a bug" Click="OnReportBugClick" />
+                        <Button Click="OnSettingsClick" Content="Settings" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <TextBox
                         IsReadOnly="True"
-                        Text="{x:Bind ViewModel.NewTorrentPath, Mode=OneWay}"
-                        PlaceholderText="No torrent selected" />
+                        PlaceholderText="No torrent selected"
+                        Text="{x:Bind ViewModel.NewTorrentPath, Mode=OneWay}" />
                     <Button
                         Grid.Column="1"
                         Content="Browse..."
-                        Command="{x:Bind ViewModel.PickTorrentCommand}" />
+                        Command="{x:Bind ViewModel.PickTorrentCommand}">
+                        <Button.KeyboardAccelerators>
+                            <KeyboardAccelerator Modifiers="Control" Key="O" />
+                        </Button.KeyboardAccelerators>
+                    </Button>
+                    <Button
+                        Grid.Column="2"
+                        Command="{x:Bind ViewModel.CompareCommand}"
+                        Content="Compare"
+                        IsEnabled="{x:Bind ViewModel.CanCompare, Mode=OneWay}"
+                        Style="{StaticResource AccentButtonStyle}">
+                        <Button.KeyboardAccelerators>
+                            <KeyboardAccelerator Key="Enter" Modifiers="Control" />
+                        </Button.KeyboardAccelerators>
+                    </Button>
                 </Grid>
 
-                <muxc:InfoBar
-                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
-                    Severity="Error"
-                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                    IsClosable="False" />
-                <muxc:InfoBar
-                    IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
-                    Severity="Success"
-                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                    IsClosable="False" />
+                <TextBlock
+                    Style="{StaticResource HintTextStyle}"
+                    Text="{x:Bind ViewModel.ArchivedTorrentPath, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.ArchivedTorrentPath, Mode=OneWay}"
+                    Visibility="{x:Bind services:Ui.Visible(ViewModel.HasArchivedTorrent), Mode=OneWay}" />
 
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Button
-                        Content="Compare torrents"
-                        Command="{x:Bind ViewModel.CompareCommand}"
-                        IsEnabled="{x:Bind ViewModel.CanCompare, Mode=OneWay}"
-                        Style="{StaticResource AccentButtonStyle}" />
+                <muxc:InfoBar
+                    AutomationProperties.LiveSetting="Assertive"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                    Severity="Error" />
+
+                <muxc:InfoBar
+                    AutomationProperties.LiveSetting="Polite"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasStatus, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                    Severity="Success" />
+
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    Visibility="{x:Bind services:Ui.Visible(ViewModel.HasProgress), Mode=OneWay}">
                     <ProgressRing
-                        Width="20"
-                        Height="20"
+                        Width="16"
+                        Height="16"
                         VerticalAlignment="Center"
                         IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource HintTextStyle}"
+                        Text="{x:Bind ViewModel.ProgressMessage, Mode=OneWay}" />
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Padding="0" Style="{StaticResource CardBorderStyle}">
+        <Border Grid.Row="1" Padding="0" Style="{StaticResource CardBorderStyle}">
             <Grid RowDefinitions="Auto,*">
-                <Grid Padding="16,16,16,8" ColumnDefinitions="*,Auto">
+                <Grid Padding="16,12" ColumnDefinitions="*,Auto">
                     <TextBlock
-                        Margin="0"
                         VerticalAlignment="Center"
-                        Style="{StaticResource SectionHeaderStyle}"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
                         Text="Changes" />
                     <StackPanel
                         Grid.Column="1"
-                        Orientation="Horizontal"
-                        Spacing="12"
                         VerticalAlignment="Center"
-                        Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowResults), Mode=OneWay}">
+                        Orientation="Horizontal"
+                        Spacing="12">
                         <TextBlock
-                            Foreground="{ThemeResource DiffAddedBrush}"
-                            Text="{x:Bind ViewModel.AddedSummary, Mode=OneWay}" />
-                        <TextBlock
-                            Foreground="{ThemeResource DiffRemovedBrush}"
-                            Text="{x:Bind ViewModel.RemovedSummary, Mode=OneWay}" />
+                            VerticalAlignment="Center"
+                            Style="{StaticResource HintTextStyle}"
+                            Text="{x:Bind ViewModel.Summary, Mode=OneWay}"
+                            Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowResults), Mode=OneWay}" />
+                        <Button
+                            Command="{x:Bind ViewModel.ClearCommand}"
+                            Content="Clear"
+                            Visibility="{x:Bind services:Ui.Visible(ViewModel.HasNewTorrent), Mode=OneWay}">
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Key="Escape" />
+                            </Button.KeyboardAccelerators>
+                        </Button>
                     </StackPanel>
                 </Grid>
 
-                <TextBlock
+                <StackPanel
                     Grid.Row="1"
+                    MaxWidth="420"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Style="{StaticResource HintTextStyle}"
-                    Text="Select a torrent to see changes"
-                    Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowHint), Mode=OneWay}" />
+                    Spacing="10"
+                    Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowWelcome), Mode=OneWay}">
+                    <FontIcon
+                        FontSize="28"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="&#xE896;" />
+                    <TextBlock
+                        Text="Open or drop a .torrent to compare it with the archived copy of the release"
+                        TextAlignment="Center"
+                        Style="{StaticResource BodyTextBlockStyle}" />
+                </StackPanel>
 
                 <TextBlock
                     Grid.Row="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Style="{StaticResource HintTextStyle}"
-                    Text="No changes found."
+                    Text="No changes found. The release matches the archived torrent."
                     Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowEmptyResult), Mode=OneWay}" />
 
                 <ListView
@@ -109,20 +158,53 @@
                     Visibility="{x:Bind services:Ui.Visible(ViewModel.ShowResults), Mode=OneWay}">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="viewModels:DiffRow">
-                            <Grid Padding="0,6" ColumnDefinitions="20,*" ColumnSpacing="10">
-                                <SymbolIcon
-                                    Symbol="Add"
+                            <Grid
+                                Padding="0,6"
+                                AutomationProperties.Name="{x:Bind AutomationName}"
+                                ColumnDefinitions="24,*,Auto"
+                                ColumnSpacing="8">
+                                <FontIcon
+                                    FontSize="14"
                                     Foreground="{ThemeResource DiffAddedBrush}"
+                                    Glyph="&#xE710;"
                                     Visibility="{x:Bind services:Ui.Visible(IsAdded)}" />
-                                <SymbolIcon
-                                    Symbol="Remove"
+                                <FontIcon
+                                    FontSize="14"
                                     Foreground="{ThemeResource DiffRemovedBrush}"
-                                    Visibility="{x:Bind services:Ui.VisibleWhenFalse(IsAdded)}" />
+                                    Glyph="&#xE738;"
+                                    Visibility="{x:Bind services:Ui.Visible(IsRemoved)}" />
+                                <FontIcon
+                                    FontSize="14"
+                                    Foreground="{ThemeResource DiffChangedBrush}"
+                                    Glyph="&#xE70F;"
+                                    Visibility="{x:Bind services:Ui.Visible(IsChanged)}" />
                                 <TextBlock
                                     Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    IsTextSelectionEnabled="True"
                                     Text="{x:Bind Path}"
                                     TextTrimming="CharacterEllipsis"
-                                    IsTextSelectionEnabled="True" />
+                                    ToolTipService.ToolTip="{x:Bind Path}" />
+                                <StackPanel
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <TextBlock
+                                        MinWidth="72"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Bind SizeText}"
+                                        TextAlignment="Right" />
+                                    <TextBlock
+                                        MinWidth="56"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Text="{x:Bind DeltaText}"
+                                        TextAlignment="Right" />
+                                </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -130,13 +212,43 @@
             </Grid>
         </Border>
 
-        <Button
-            Grid.Row="3"
-            HorizontalAlignment="Stretch"
-            Content="Add to qBittorrent (select new files)"
-            Command="{x:Bind ViewModel.AddToQBittorrentCommand}"
-            IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
-            Style="{StaticResource AccentButtonStyle}"
-            Visibility="{x:Bind services:Ui.Visible(ViewModel.HasAdded), Mode=OneWay}" />
+        <StackPanel
+            Grid.Row="2"
+            Spacing="8"
+            Visibility="{x:Bind services:Ui.Visible(ViewModel.HasDownloads), Mode=OneWay}">
+            <TextBlock
+                HorizontalAlignment="Center"
+                Style="{StaticResource HintTextStyle}"
+                Text="{x:Bind ViewModel.DownloadSummary, Mode=OneWay}" />
+            <Button
+                HorizontalAlignment="Stretch"
+                Command="{x:Bind ViewModel.AddToQBittorrentCommand}"
+                Content="Add to qBittorrent (paused)"
+                IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
+                Style="{StaticResource AccentButtonStyle}" />
+        </StackPanel>
+
+        <Border
+            x:Name="DropOverlay"
+            Grid.RowSpan="3"
+            Margin="4"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+            BorderThickness="2"
+            CornerRadius="8"
+            IsHitTestVisible="False"
+            Visibility="Collapsed">
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="10">
+                <FontIcon FontSize="28" Glyph="&#xE896;" />
+                <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Drop the .torrent to compare" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Style="{StaticResource HintTextStyle}"
+                    Text="The archived copy is located automatically." />
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

@@ -23,6 +23,7 @@ public sealed partial class SettingsWindow : Window
             this);
 
         App.Services.Theme.Register(this);
+        WindowChrome.ApplyBackdrop(this, RootGrid);
         Closed += OnClosed;
 
         ResizeAndCenter();

@@ -49,21 +49,22 @@ internal sealed class BencodeReader
             throw new TorrentFormatException("Torrent data ended unexpectedly");
         }
 
+        var start = _index;
         return _data[_index] switch
         {
-            (byte)'i' => ReadInteger(),
-            (byte)'l' => ReadList(depth),
-            (byte)'d' => ReadDictionary(depth),
-            >= (byte)'0' and <= (byte)'9' => ReadString(),
+            (byte)'i' => ReadInteger(start),
+            (byte)'l' => ReadList(depth, start),
+            (byte)'d' => ReadDictionary(depth, start),
+            >= (byte)'0' and <= (byte)'9' => ReadString(start),
             var other => throw new TorrentFormatException(
                 $"Unexpected byte 0x{other:x2} at offset {_index}"),
         };
     }
 
-    private BencodeInteger ReadInteger()
+    private BencodeInteger ReadInteger(int start)
     {
         _index++;
-        var start = _index;
+        var digitsStart = _index;
         while (_index < _data.Length && _data[_index] != (byte)'e')
         {
             _index++;
@@ -74,7 +75,7 @@ internal sealed class BencodeReader
             throw new TorrentFormatException("Unterminated integer");
         }
 
-        var span = _data.AsSpan(start, _index - start);
+        var span = _data.AsSpan(digitsStart, _index - digitsStart);
         _index++;
 
         if (span.IsEmpty)
@@ -88,12 +89,11 @@ internal sealed class BencodeReader
             throw new TorrentFormatException("Invalid integer");
         }
 
-        return new BencodeInteger(value);
+        return new BencodeInteger(value, start, _index);
     }
 
-    private BencodeString ReadString()
+    private BencodeString ReadString(int start)
     {
-        var start = _index;
         var colon = Array.IndexOf(_data, (byte)':', start);
         if (colon < 0)
         {
@@ -116,10 +116,10 @@ internal sealed class BencodeReader
 
         var bytes = _data.AsSpan(bodyStart, length).ToArray();
         _index = bodyStart + length;
-        return new BencodeString(bytes);
+        return new BencodeString(bytes, start, _index);
     }
 
-    private BencodeList ReadList(int depth)
+    private BencodeList ReadList(int depth, int start)
     {
         _index++;
         var items = new List<BencodeValue>();
@@ -133,14 +133,14 @@ internal sealed class BencodeReader
             if (_data[_index] == (byte)'e')
             {
                 _index++;
-                return new BencodeList(items);
+                return new BencodeList(items, start, _index);
             }
 
             items.Add(ReadValue(depth + 1));
         }
     }
 
-    private BencodeDictionary ReadDictionary(int depth)
+    private BencodeDictionary ReadDictionary(int depth, int start)
     {
         _index++;
         var entries = new Dictionary<string, BencodeValue>(StringComparer.Ordinal);
@@ -154,7 +154,7 @@ internal sealed class BencodeReader
             if (_data[_index] == (byte)'e')
             {
                 _index++;
-                return new BencodeDictionary(entries);
+                return new BencodeDictionary(entries, start, _index);
             }
 
             if (_data[_index] is < (byte)'0' or > (byte)'9')
@@ -162,7 +162,8 @@ internal sealed class BencodeReader
                 throw new TorrentFormatException("Dictionary keys must be strings");
             }
 
-            var key = ReadString();
+            var keyStart = _index;
+            var key = ReadString(keyStart);
             var value = ReadValue(depth + 1);
             entries[TextDecoder.Decode(key.Value)] = value;
         }

@@ -3,5 +3,32 @@
     x:Class="Tdt.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Frame x:Name="RootFrame" />
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            x:Name="AppTitleBar"
+            Padding="16,0,0,0"
+            ColumnDefinitions="Auto,Auto,*">
+            <Image
+                Width="16"
+                Height="16"
+                VerticalAlignment="Center"
+                Source="ms-appx:///Assets/tdt-32.png" />
+            <TextBlock
+                Grid.Column="1"
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="Torrent Diff Tool" />
+        </Grid>
+
+        <Frame
+            x:Name="RootFrame"
+            Grid.Row="1"
+            Background="Transparent" />
+    </Grid>
 </Window>

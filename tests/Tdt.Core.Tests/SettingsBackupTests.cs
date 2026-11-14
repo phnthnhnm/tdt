@@ -103,4 +103,14 @@ public sealed class SettingsBackupTests : IDisposable
 
         Assert.Throws<InvalidDataException>(() => store.Import(BackupPath));
     }
+
+    [Fact]
+    public void ImportRejectsABackupFromANewerVersion()
+    {
+        var store = CreateStore();
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(BackupPath, """{"version": 99, "dataFolder": "D:\\New"}""");
+
+        Assert.Throws<InvalidDataException>(() => store.Import(BackupPath));
+    }
 }

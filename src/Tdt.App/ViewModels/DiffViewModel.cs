@@ -10,8 +10,8 @@ using Tdt.Core.Torrent;
 namespace Tdt.App.ViewModels;
 
 /// <summary>
-/// Drives the compare workflow: pick a torrent, diff it against the archived
-/// copy of the same name, then open only the new files in qBittorrent.
+/// Drives the compare workflow: find the archived copy of a released torrent,
+/// diff the two, then hand the additions and replacements to qBittorrent.
 /// </summary>
 public sealed partial class DiffViewModel : ObservableObject
 {
@@ -19,8 +19,7 @@ public sealed partial class DiffViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private readonly Window _window;
 
-    private List<string> _added = [];
-    private List<string> _removed = [];
+    private TorrentComparison? _comparison;
 
     public DiffViewModel(AppServices services, IDialogService dialogs, Window window)
     {
@@ -38,7 +37,12 @@ public sealed partial class DiffViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNewTorrent))]
     [NotifyPropertyChangedFor(nameof(CanCompare))]
+    [NotifyPropertyChangedFor(nameof(ShowWelcome))]
     private string? _newTorrentPath;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasArchivedTorrent))]
+    private string? _archivedTorrentPath;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
@@ -49,30 +53,45 @@ public sealed partial class DiffViewModel : ObservableObject
     private string? _statusMessage;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProgress))]
+    private string? _progressMessage;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanCompare))]
     [NotifyPropertyChangedFor(nameof(CanAdd))]
+    [NotifyPropertyChangedFor(nameof(ShowWelcome))]
     private bool _isBusy;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowHint))]
     [NotifyPropertyChangedFor(nameof(ShowResults))]
     [NotifyPropertyChangedFor(nameof(ShowEmptyResult))]
-    [NotifyPropertyChangedFor(nameof(AddedSummary))]
-    [NotifyPropertyChangedFor(nameof(RemovedSummary))]
+    [NotifyPropertyChangedFor(nameof(ShowWelcome))]
     private bool _hasCompared;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasAdded))]
+    [NotifyPropertyChangedFor(nameof(HasDownloads))]
     [NotifyPropertyChangedFor(nameof(CanAdd))]
-    [NotifyPropertyChangedFor(nameof(ShowEmptyResult))]
-    [NotifyPropertyChangedFor(nameof(AddedSummary))]
+    [NotifyPropertyChangedFor(nameof(Summary))]
     private int _addedCount;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RemovedSummary))]
+    [NotifyPropertyChangedFor(nameof(Summary))]
     private int _removedCount;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDownloads))]
+    [NotifyPropertyChangedFor(nameof(CanAdd))]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private int _changedCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDownloads))]
+    [NotifyPropertyChangedFor(nameof(CanAdd))]
+    private string? _downloadSizeText;
+
     public bool HasNewTorrent => !string.IsNullOrEmpty(NewTorrentPath);
+
+    public bool HasArchivedTorrent => !string.IsNullOrEmpty(ArchivedTorrentPath);
 
     public bool CanCompare => HasNewTorrent && !IsBusy;
 
@@ -80,84 +99,82 @@ public sealed partial class DiffViewModel : ObservableObject
 
     public bool HasStatus => !string.IsNullOrEmpty(StatusMessage);
 
-    public bool HasAdded => AddedCount > 0;
+    public bool HasProgress => !string.IsNullOrEmpty(ProgressMessage);
 
-    public bool CanAdd => HasAdded && !IsBusy;
+    public bool HasDownloads => AddedCount + ChangedCount > 0;
 
-    public bool ShowHint => !HasCompared;
+    public bool CanAdd => HasDownloads && !IsBusy;
+
+    public bool ShowWelcome => !HasCompared && !HasNewTorrent && !IsBusy;
 
     public bool ShowResults => HasCompared;
 
-    public bool ShowEmptyResult => HasCompared && Rows.Count == 0 && AddedCount == 0 && RemovedCount == 0;
+    public bool ShowEmptyResult => HasCompared && Rows.Count == 0;
 
-    public string AddedSummary => $"New: {AddedCount}";
+    public string Summary => HasCompared
+        ? $"New {AddedCount}   Removed {RemovedCount}   Changed {ChangedCount}"
+        : string.Empty;
 
-    public string RemovedSummary => $"Removed: {RemovedCount}";
+    public string DownloadSummary => HasDownloads
+        ? $"{AddedCount + ChangedCount} file(s), {DownloadSizeText} to download"
+        : string.Empty;
 
     [RelayCommand]
     private async Task PickTorrentAsync()
     {
         var path = await _services.Pickers.PickTorrentAsync(_window);
-        if (string.IsNullOrEmpty(path))
+        if (!string.IsNullOrEmpty(path))
         {
-            return;
+            await LoadTorrentAsync(path);
         }
-
-        NewTorrentPath = path;
-        ErrorMessage = null;
-        StatusMessage = null;
-        ValidateOldTorrent(path);
     }
 
-    [RelayCommand]
-    private async Task CompareAsync()
+    /// <summary>
+    /// Loads a released torrent, finds its archived copy and compares them.
+    /// Used by both the file picker and drag and drop.
+    /// </summary>
+    public async Task LoadTorrentAsync(string releasedTorrentPath)
     {
-        if (string.IsNullOrEmpty(NewTorrentPath))
+        if (string.IsNullOrWhiteSpace(releasedTorrentPath))
         {
             return;
         }
 
-        var settings = _services.Settings;
-        if (!settings.HasDataFolder)
-        {
-            ErrorMessage = "Data folder not set in Settings";
-            return;
-        }
-
-        var oldPath = Path.Combine(settings.DataFolder, Path.GetFileName(NewTorrentPath));
-        if (!File.Exists(oldPath))
-        {
-            ErrorMessage = "No matching old torrent found in data folder";
-            return;
-        }
-
-        IsBusy = true;
+        NewTorrentPath = releasedTorrentPath;
+        ArchivedTorrentPath = null;
+        _comparison = null;
+        Rows.Clear();
+        AddedCount = 0;
+        RemovedCount = 0;
+        ChangedCount = 0;
+        DownloadSizeText = null;
+        HasCompared = false;
         ErrorMessage = null;
         StatusMessage = null;
+
+        IsBusy = true;
+        ProgressMessage = "Looking for the archived torrent...";
 
         try
         {
-            var oldTorrent = await _services.Torrents.LoadAsync(oldPath);
-            var newTorrent = await _services.Torrents.LoadAsync(NewTorrentPath);
-            var diff = TorrentDiff.Between(oldTorrent.Paths, newTorrent.Paths);
+            var match = await _services.Locator.LocateAsync(
+                releasedTorrentPath, _services.Settings.DataFolder);
 
-            _added = [.. diff.Added];
-            _removed = [.. diff.Removed];
-
-            Rows.Clear();
-            foreach (var path in _added)
+            if (!match.IsFound)
             {
-                Rows.Add(new DiffRow(path, isAdded: true));
+                ErrorMessage = match.Status switch
+                {
+                    ArchivedTorrentStatus.DataFolderNotConfigured =>
+                        "Data folder not set in Settings",
+                    ArchivedTorrentStatus.DataFolderMissing =>
+                        "The data folder does not exist. Choose it in Settings.",
+                    _ => "No archived torrent found for this release. Put the old .torrent in the data folder.",
+                };
+                return;
             }
 
-            foreach (var path in _removed)
-            {
-                Rows.Add(new DiffRow(path, isAdded: false));
-            }
-
-            AddedCount = _added.Count;
-            RemovedCount = _removed.Count;
-            HasCompared = true;
+            ProgressMessage = "Comparing torrents...";
+            await ApplyComparisonAsync(match.ArchivedPath!, match.Released!);
         }
         catch (TorrentFormatException ex)
         {
@@ -170,21 +187,50 @@ public sealed partial class DiffViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+            ProgressMessage = null;
         }
+    }
+
+    [RelayCommand]
+    private async Task CompareAsync()
+    {
+        if (string.IsNullOrEmpty(NewTorrentPath))
+        {
+            return;
+        }
+
+        await LoadTorrentAsync(NewTorrentPath);
+    }
+
+    [RelayCommand]
+    private void Clear()
+    {
+        NewTorrentPath = null;
+        ArchivedTorrentPath = null;
+        _comparison = null;
+        Rows.Clear();
+        AddedCount = 0;
+        RemovedCount = 0;
+        ChangedCount = 0;
+        DownloadSizeText = null;
+        HasCompared = false;
+        ErrorMessage = null;
+        StatusMessage = null;
     }
 
     [RelayCommand]
     private async Task AddToQBittorrentAsync()
     {
-        if (_added.Count == 0 || string.IsNullOrEmpty(NewTorrentPath))
+        if (_comparison is null || string.IsNullOrEmpty(NewTorrentPath))
         {
             return;
         }
 
-        var qBittorrent = _services.Settings.QBittorrent;
-        if (!qBittorrent.IsConfigured)
+        var settings = _services.Settings.QBittorrent;
+        var validation = settings.Validate();
+        if (validation is not null)
         {
-            ErrorMessage = "qBittorrent settings not configured";
+            ErrorMessage = validation;
             return;
         }
 
@@ -194,37 +240,27 @@ public sealed partial class DiffViewModel : ObservableObject
 
         try
         {
-            var connection = new QBittorrentConnection(
-                qBittorrent.NormalizedHost,
-                qBittorrent.Port,
-                qBittorrent.UseHttps);
+            ProgressMessage = "Signing in to qBittorrent...";
+            var connection = await QBittorrentSession.ConnectAsync(_services.QBittorrent, settings);
 
-            _services.QBittorrent.SetApiKey(qBittorrent.HasApiKey ? qBittorrent.ApiKey : null);
-            if (!qBittorrent.HasApiKey)
-            {
-                await _services.QBittorrent.LoginAsync(
-                    connection,
-                    qBittorrent.Username,
-                    qBittorrent.Password);
-            }
+            var downloads = _comparison.Diff.ToDownload
+                .Select(change => change.Path)
+                .ToList();
 
-            var preview = await _services.Adder.PrepareAsync(
-                NewTorrentPath,
-                _added,
-                qBittorrent.Blacklist);
+            var plan = _services.Adder.Plan(_comparison.Released, downloads, settings.Blacklist);
 
-            if (!await _dialogs.ConfirmAddTorrentAsync(preview))
+            ProgressMessage = null;
+            if (!await _dialogs.ConfirmAddTorrentAsync(plan))
             {
                 return;
             }
 
-            await _services.Adder.AddAsync(
-                connection,
-                NewTorrentPath,
-                _added,
-                qBittorrent.Blacklist);
+            ProgressMessage = "Adding the torrent and selecting files...";
+            var result = await _services.Adder.AddAsync(connection, NewTorrentPath, plan);
 
-            StatusMessage = "Torrent added to qBittorrent (paused)";
+            StatusMessage = result.SelectedCount == 0
+                ? "Torrent added to qBittorrent (paused); no files matched the selection"
+                : $"Torrent added to qBittorrent (paused); {result.SelectedCount} of {result.FileCount} files selected";
         }
         catch (Exception ex) when (
             ex is QBittorrentException
@@ -239,22 +275,37 @@ public sealed partial class DiffViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+            ProgressMessage = null;
         }
     }
 
-    private void ValidateOldTorrent(string newPath)
+    private async Task ApplyComparisonAsync(string archivedPath, TorrentInfo released)
     {
-        var settings = _services.Settings;
-        if (!settings.HasDataFolder)
+        var comparison = await _services.Comparisons.CompareAsync(archivedPath, released);
+        _comparison = comparison;
+
+        Rows.Clear();
+        foreach (var change in comparison.Diff.Added)
         {
-            ErrorMessage = "Data folder not set in Settings";
-            return;
+            Rows.Add(new DiffRow(change, DiffRowKind.Added));
         }
 
-        var candidate = Path.Combine(settings.DataFolder, Path.GetFileName(newPath));
-        if (!File.Exists(candidate))
+        foreach (var change in comparison.Diff.Changed)
         {
-            ErrorMessage = "No matching old torrent found in data folder";
+            Rows.Add(new DiffRow(change, DiffRowKind.Changed));
         }
+
+        foreach (var change in comparison.Diff.Removed)
+        {
+            Rows.Add(new DiffRow(change, DiffRowKind.Removed));
+        }
+
+        AddedCount = comparison.Diff.Added.Count;
+        RemovedCount = comparison.Diff.Removed.Count;
+        ChangedCount = comparison.Diff.Changed.Count;
+        DownloadSizeText = SizeFormatter.Format(
+            comparison.Diff.ToDownload.Sum(change => change.NewLength ?? 0));
+        ArchivedTorrentPath = archivedPath;
+        HasCompared = true;
     }
 }

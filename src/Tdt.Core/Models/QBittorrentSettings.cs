@@ -3,9 +3,11 @@ namespace Tdt.Core.Models;
 /// <summary>The qBittorrent WebUI connection and selection settings.</summary>
 public sealed class QBittorrentSettings
 {
+    public const int DefaultPort = 8080;
+
     public string Host { get; set; } = string.Empty;
 
-    public int Port { get; set; } = 8080;
+    public int Port { get; set; } = DefaultPort;
 
     public string Username { get; set; } = string.Empty;
 
@@ -24,4 +26,22 @@ public sealed class QBittorrentSettings
     public bool HasApiKey => !string.IsNullOrWhiteSpace(ApiKey);
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(NormalizedHost);
+
+    /// <summary>
+    /// Why the settings cannot be used, or null when they are complete.
+    /// </summary>
+    public string? Validate()
+    {
+        if (!IsConfigured)
+        {
+            return "Enter the host of the qBittorrent WebUI.";
+        }
+
+        if (Port is < 1 or > 65535)
+        {
+            return "The port must be a number between 1 and 65535.";
+        }
+
+        return null;
+    }
 }

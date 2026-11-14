@@ -12,28 +12,38 @@ public sealed class AppServices
     private AppServices(
         ISettingsStore settingsStore,
         ITorrentService torrents,
+        ITorrentComparisonService comparisons,
+        IArchivedTorrentLocator locator,
         IQBittorrentClient qBittorrent,
-        TorrentAddService adder,
+        ITorrentAddService adder,
         IFilePickerService pickers,
         ThemeService theme,
-        AppSettings settings)
+        AppSettings settings,
+        string? settingsWarning)
     {
         SettingsStore = settingsStore;
         Torrents = torrents;
+        Comparisons = comparisons;
+        Locator = locator;
         QBittorrent = qBittorrent;
         Adder = adder;
         Pickers = pickers;
         Theme = theme;
         Settings = settings;
+        SettingsWarning = settingsWarning;
     }
 
     public ISettingsStore SettingsStore { get; }
 
     public ITorrentService Torrents { get; }
 
+    public ITorrentComparisonService Comparisons { get; }
+
+    public IArchivedTorrentLocator Locator { get; }
+
     public IQBittorrentClient QBittorrent { get; }
 
-    public TorrentAddService Adder { get; }
+    public ITorrentAddService Adder { get; }
 
     public IFilePickerService Pickers { get; }
 
@@ -41,6 +51,9 @@ public sealed class AppServices
 
     /// <summary>The settings snapshot every caller reads from.</summary>
     public AppSettings Settings { get; private set; }
+
+    /// <summary>Why the settings fell back to defaults at startup, if they did.</summary>
+    public string? SettingsWarning { get; private set; }
 
     public static AppServices CreateDefault()
     {
@@ -58,11 +71,14 @@ public sealed class AppServices
         return new AppServices(
             store,
             torrents,
+            new TorrentComparisonService(torrents),
+            new ArchivedTorrentLocator(torrents),
             qBittorrent,
-            new TorrentAddService(qBittorrent, torrents),
+            new TorrentAddService(qBittorrent),
             new FilePickerService(),
             theme,
-            settings);
+            settings,
+            store.LastLoadWarning);
     }
 
     /// <summary>Persists the settings and applies the parts services cache.</summary>
@@ -72,6 +88,7 @@ public sealed class AppServices
 
         SettingsStore.Save(settings);
         Settings = settings;
+        SettingsWarning = null;
         QBittorrent.SetApiKey(settings.QBittorrent.ApiKey);
         Theme.SetTheme(settings.Theme);
     }
@@ -80,6 +97,7 @@ public sealed class AppServices
     public void ReloadSettings()
     {
         Settings = SettingsStore.Load();
+        SettingsWarning = SettingsStore.LastLoadWarning;
         QBittorrent.SetApiKey(Settings.QBittorrent.ApiKey);
         Theme.SetTheme(Settings.Theme);
     }
@@ -89,5 +107,32 @@ public sealed class AppServices
     {
         SettingsStore.Reset();
         ReloadSettings();
+    }
+
+    /// <summary>Remembers the main window geometry for the next start.</summary>
+    public void SaveWindowBounds(int width, int height, int x, int y)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var current = Settings;
+        if (current.Window.Width == width &&
+            current.Window.Height == height &&
+            current.Window.X == x &&
+            current.Window.Y == y)
+        {
+            return;
+        }
+
+        UpdateSettings(new AppSettings
+        {
+            Version = current.Version,
+            Theme = current.Theme,
+            DataFolder = current.DataFolder,
+            QBittorrent = current.QBittorrent,
+            Window = new WindowPlacement { Width = width, Height = height, X = x, Y = y },
+        });
     }
 }

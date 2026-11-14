@@ -1,56 +1,52 @@
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Tdt.Core.Tests.Support;
 
 /// <summary>
 /// Bencode writer used to build torrent fixtures in memory, so the tests do not
-/// depend on checked-in binary files.
+/// depend on checked-in binary files. Each builder returns the torrent bytes and
+/// the exact info bytes, which lets a test verify the info hash independently.
 /// </summary>
 internal static class BencodeFixture
 {
-    public static byte[] Encode(object? value)
+    /// <summary>A file inside a fixture torrent.</summary>
+    public readonly record struct FileSpec(string[] Segments, long Length);
+
+    public static (byte[] Torrent, byte[] Info) MultiFileTorrent(
+        string name,
+        params FileSpec[] files)
     {
-        using var stream = new MemoryStream();
-        Write(value, stream);
-        return stream.ToArray();
+        var info = new Dictionary<string, object?>
+        {
+            ["name"] = name,
+            ["piece length"] = 16384,
+            ["pieces"] = PieceHashes(),
+            ["files"] = files
+                .Select(file => (object?)new Dictionary<string, object?>
+                {
+                    ["length"] = file.Length,
+                    ["path"] = file.Segments.Cast<object?>().ToList(),
+                })
+                .ToList(),
+        };
+
+        return Wrap(info);
     }
 
-    /// <summary>A multi-file torrent; <paramref name="paths"/> are path segments.</summary>
-    public static byte[] MultiFileTorrent(string name, params string[][] paths)
+    public static (byte[] Torrent, byte[] Info) SingleFileTorrent(
+        string name,
+        long length = 4096)
     {
-        return Encode(new Dictionary<string, object?>
+        var info = new Dictionary<string, object?>
         {
-            ["announce"] = "http://tracker.example/announce",
-            ["info"] = new Dictionary<string, object?>
-            {
-                ["name"] = name,
-                ["piece length"] = 16384,
-                ["pieces"] = PieceHashes(),
-                ["files"] = paths
-                    .Select(segments => (object?)new Dictionary<string, object?>
-                    {
-                        ["length"] = 1024,
-                        ["path"] = segments.Cast<object?>().ToList(),
-                    })
-                    .ToList(),
-            },
-        });
-    }
+            ["name"] = name,
+            ["piece length"] = 16384,
+            ["pieces"] = PieceHashes(),
+            ["length"] = length,
+        };
 
-    /// <summary>A single-file torrent, where info carries its own length.</summary>
-    public static byte[] SingleFileTorrent(string name, long length = 4096)
-    {
-        return Encode(new Dictionary<string, object?>
-        {
-            ["announce"] = "http://tracker.example/announce",
-            ["info"] = new Dictionary<string, object?>
-            {
-                ["name"] = name,
-                ["piece length"] = 16384,
-                ["pieces"] = PieceHashes(),
-                ["length"] = length,
-            },
-        });
+        return Wrap(info);
     }
 
     public static byte[] PieceHashes()
@@ -58,10 +54,39 @@ internal static class BencodeFixture
         return [.. Enumerable.Range(0, 20).Select(index => (byte)index)];
     }
 
-    /// <summary>The path the parser reports for segments inside a torrent.</summary>
-    public static string TorrentFilePath(string name, params string[] segments)
+    /// <summary>The hash a correct parser must report for these info bytes.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Security",
+        "CA5350:Do Not Use Weak Cryptographic Algorithms",
+        Justification = "BitTorrent v1 identifies a torrent by the SHA-1 of its info dictionary.")]
+    public static string ExpectedInfoHash(byte[] info)
     {
-        return string.Join(Path.DirectorySeparatorChar, new[] { name }.Concat(segments));
+        return Convert.ToHexStringLower(SHA1.HashData(info));
+    }
+
+    /// <summary>A path relative to the torrent root, as the parser reports it.</summary>
+    public static string Relative(params string[] segments)
+    {
+        return string.Join(Path.DirectorySeparatorChar, segments);
+    }
+
+    public static byte[] Encode(object? value)
+    {
+        using var stream = new MemoryStream();
+        Write(value, stream);
+        return stream.ToArray();
+    }
+
+    private static (byte[] Torrent, byte[] Info) Wrap(Dictionary<string, object?> info)
+    {
+        var infoBytes = Encode(info);
+        var torrent = Encode(new Dictionary<string, object?>
+        {
+            ["announce"] = "http://tracker.example/announce",
+            ["info"] = info,
+        });
+
+        return (torrent, infoBytes);
     }
 
     private static void Write(object? value, Stream stream)
@@ -106,14 +131,12 @@ internal static class BencodeFixture
 
     private static void WriteInteger(long value, Stream stream)
     {
-        var bytes = Encoding.ASCII.GetBytes($"i{value}e");
-        stream.Write(bytes);
+        stream.Write(Encoding.ASCII.GetBytes($"i{value}e"));
     }
 
     private static void WriteString(byte[] bytes, Stream stream)
     {
-        var header = Encoding.ASCII.GetBytes($"{bytes.Length}:");
-        stream.Write(header);
+        stream.Write(Encoding.ASCII.GetBytes($"{bytes.Length}:"));
         stream.Write(bytes);
     }
 }

@@ -13,10 +13,12 @@
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="DiffAddedBrush" Color="#0F7B0F" />
                     <SolidColorBrush x:Key="DiffRemovedBrush" Color="#C42B1C" />
+                    <SolidColorBrush x:Key="DiffChangedBrush" Color="#9D5D00" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="DiffAddedBrush" Color="#6CCB5F" />
                     <SolidColorBrush x:Key="DiffRemovedBrush" Color="#FF99A4" />
+                    <SolidColorBrush x:Key="DiffChangedBrush" Color="#FCD667" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -28,14 +30,18 @@
                 <Setter Property="Padding" Value="16" />
             </Style>
 
-            <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextBlockStyle}">
-                <Setter Property="Margin" Value="0,0,0,4" />
-            </Style>
-
             <Style x:Key="HintTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
+
+            <!-- Paths in dialogs: one line, ellipsis, full text in a tooltip. -->
+            <DataTemplate x:Key="PathTemplate">
+                <TextBlock
+                    Text="{Binding}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{Binding}" />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

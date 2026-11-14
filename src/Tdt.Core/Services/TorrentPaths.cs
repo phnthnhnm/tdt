@@ -1,37 +1,57 @@
 namespace Tdt.Core.Services;
 
-/// <summary>Path helpers shared by the diff and the qBittorrent selection.</summary>
+/// <summary>
+/// Path helpers for matching torrent-relative paths against the content paths
+/// qBittorrent reports, which are relative to the torrent root and always use
+/// forward slashes.
+/// </summary>
 public static class TorrentPaths
 {
-    /// <summary>
-    /// Normalizes a qBittorrent content path, which always uses forward
-    /// slashes, into a platform path.
-    /// </summary>
-    public static string Normalize(string path)
+    /// <summary>Rewrites a path to the forward-slash form used by torrents.</summary>
+    public static string ToContentPath(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        return path.Replace('/', Path.DirectorySeparatorChar);
+        return path.Replace('\\', '/');
     }
 
     /// <summary>
-    /// The file name of a torrent path, ignoring the torrent root and any
-    /// separator style.
+    /// True when a qBittorrent content path names the same file as a
+    /// torrent-relative path.
     /// </summary>
-    public static string GetFileName(string path)
+    /// <remarks>
+    /// qBittorrent prefixes content paths with the torrent root, so the
+    /// comparison strips it when present. Windows paths are case-insensitive,
+    /// hence the ordinal-ignore-case compare; a case-sensitive compare would
+    /// miss files whose name casing drifted between releases.
+    /// </remarks>
+    public static bool MatchesContentPath(
+        string contentPath,
+        string torrentName,
+        string relativePath)
     {
-        return Path.GetFileName(Normalize(path));
-    }
+        ArgumentNullException.ThrowIfNull(contentPath);
+        ArgumentNullException.ThrowIfNull(torrentName);
+        ArgumentNullException.ThrowIfNull(relativePath);
 
-    /// <summary>
-    /// True when <paramref name="candidate"/> names the same file as
-    /// <paramref name="target"/>. The torrent root differs between the
-    /// archived and the new torrent often enough that only the file name is
-    /// reliable.
-    /// </summary>
-    public static bool IsSameFile(string candidate, string target)
-    {
-        var candidateName = GetFileName(candidate);
-        return candidateName.Length > 0 &&
-            string.Equals(candidateName, GetFileName(target), StringComparison.Ordinal);
+        var content = ToContentPath(contentPath);
+        var relative = ToContentPath(relativePath);
+        if (relative.Length == 0)
+        {
+            return false;
+        }
+
+        if (content.Equals(relative, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var root = ToContentPath(torrentName);
+        if (root.Length == 0 ||
+            !content.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return content[(root.Length + 1)..].Equals(relative, StringComparison.OrdinalIgnoreCase);
     }
 }
