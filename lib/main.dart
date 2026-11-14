@@ -1,8 +1,8 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'screens/diff_screen.dart';
 import 'services/qbittorrent_service.dart';

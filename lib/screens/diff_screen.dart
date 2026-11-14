@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dtorrent_parser/dtorrent_parser.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,13 +31,13 @@ class _DiffScreenState extends State<DiffScreen> {
   bool _hasCompared = false;
 
   Future<void> _pickNewFile() async {
-    FilePickerResult? result = await FilePicker.pickFiles(
+    final files = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['torrent'],
     );
 
-    if (result == null) return;
-    final newPath = result.files.single.path;
+    if (files.isEmpty) return;
+    final newPath = files.single.path;
     if (newPath == null) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -237,9 +237,8 @@ class _DiffScreenState extends State<DiffScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('qBittorrent error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('qBittorrent error: $e')));
       }
     }
   }

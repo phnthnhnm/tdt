@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/settings_backup.dart';
@@ -39,9 +39,8 @@ class _DataTabState extends State<DataTab> {
         _folder = result;
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Data folder saved')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Data folder saved')));
     }
   }
 
@@ -67,35 +66,33 @@ class _DataTabState extends State<DataTab> {
       );
       await backupFile.writeAsString(dump);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Backup saved as $filename')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Backup saved as $filename')));
     }
   }
 
   Future<void> _restoreData() async {
-    FilePickerResult? result = await FilePicker.pickFiles(
+    final files = await FilePicker.pickFiles(
       dialogTitle: 'Select backup JSON file',
       type: FileType.custom,
       allowedExtensions: ['json'],
     );
-    if (result != null && result.files.single.path != null) {
-      final file = File(result.files.single.path!);
+    final backupPath = files.isEmpty ? null : files.single.path;
+    if (backupPath != null) {
+      final file = File(backupPath);
       final inputJson = await file.readAsString();
       try {
         final data = SettingsBackup.decode(inputJson);
         final prefs = await SharedPreferences.getInstance();
         await SettingsBackup.restore(prefs, data);
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Data restored!')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Data restored!')));
         await _load();
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Invalid backup data')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Invalid backup data')));
       }
     }
   }

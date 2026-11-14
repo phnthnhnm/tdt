@@ -161,9 +161,8 @@ void main() {
         ]),
       );
 
-      final torrents = await QBittorrentService(
-        client,
-      ).getTorrents(host, port, false);
+      final torrents = await QBittorrentService(client)
+          .getTorrents(host, port, false);
 
       expect(torrents, hasLength(1));
       expect(torrents.single['hash'], 'abc');
@@ -185,9 +184,8 @@ void main() {
         ]),
       );
 
-      final files = await QBittorrentService(
-        client,
-      ).getTorrentFiles(host, port, false, 'deadbeef');
+      final files = await QBittorrentService(client)
+          .getTorrentFiles(host, port, false, 'deadbeef');
 
       expect(client.lastRequest.url.query, 'hash=deadbeef');
       expect(files.single['index'], 0);
@@ -234,9 +232,8 @@ void main() {
     test('defaults to paused and omits the save path', () async {
       final client = FakeHttpClient((_) => emptyResponse());
 
-      await QBittorrentService(
-        client,
-      ).addTorrentBytes(host, port, false, const [1, 2, 3]);
+      await QBittorrentService(client)
+          .addTorrentBytes(host, port, false, const [1, 2, 3]);
 
       final multipart = client.lastRequest as http.MultipartRequest;
       expect(multipart.fields['paused'], 'true');
@@ -247,9 +244,8 @@ void main() {
       final client = FakeHttpClient((_) => emptyResponse(statusCode: 415));
 
       await expectLater(
-        QBittorrentService(
-          client,
-        ).addTorrentBytes(host, port, false, const [1]),
+        QBittorrentService(client)
+            .addTorrentBytes(host, port, false, const [1]),
         throwsA(isA<Exception>()),
       );
     });
@@ -257,9 +253,8 @@ void main() {
     test('posts file priorities', () async {
       final client = FakeHttpClient((_) => emptyResponse());
 
-      await QBittorrentService(
-        client,
-      ).setFilePriority(host, port, false, 'abc', '0|2|5', 1);
+      await QBittorrentService(client)
+          .setFilePriority(host, port, false, 'abc', '0|2|5', 1);
 
       final request = client.lastRequest;
       expect(request.url.path, '/api/v2/torrents/filePrio');
@@ -274,9 +269,8 @@ void main() {
       final client = FakeHttpClient((_) => emptyResponse(statusCode: 400));
 
       await expectLater(
-        QBittorrentService(
-          client,
-        ).setFilePriority(host, port, false, 'abc', '0', 0),
+        QBittorrentService(client)
+            .setFilePriority(host, port, false, 'abc', '0', 0),
         throwsA(isA<Exception>()),
       );
     });
