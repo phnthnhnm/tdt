@@ -57,8 +57,8 @@ is written outside `%APPDATA%\Tdt`.
 
 | Archive | Download | Requires |
 | --- | --- | --- |
-| `tdt-<version>-windows-x64.zip` | about 28 MB | .NET 11 Desktop Runtime and Windows App Runtime 2.7 |
-| `tdt-<version>-windows-x64-standalone.zip` | about 96 MB | nothing else |
+| `tdt-<version>-windows-x64.zip` | about 26 MB | .NET 11 Desktop Runtime and Windows App Runtime 2.7 |
+| `tdt-<version>-windows-x64-standalone.zip` | about 90 MB | nothing else |
 
 Take the small archive if those two runtimes are already on the machine;
 otherwise take the standalone one.
