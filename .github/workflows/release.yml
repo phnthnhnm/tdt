@@ -147,7 +147,7 @@ jobs:
             echo
             echo "### Downloads"
             echo
-            echo "- \`tdt-${GITHUB_REF_NAME#v}-windows-x64.zip\` needs the .NET 11 Desktop Runtime and Windows App Runtime 2.6."
+            echo "- \`tdt-${GITHUB_REF_NAME#v}-windows-x64.zip\` needs the .NET 11 Desktop Runtime and Windows App Runtime 2.7."
             echo "- \`tdt-${GITHUB_REF_NAME#v}-windows-x64-standalone.zip\` needs nothing else."
             if [[ -n "$COMPARE" ]]; then
               echo
