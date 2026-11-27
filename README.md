@@ -39,7 +39,7 @@ your downloads, diffs the file lists, and selects only what actually changed.
 - Timestamped settings backup and restore; a settings file that cannot be read is
   kept beside the original instead of being overwritten.
 - Native Windows 11 look: Mica backdrop, custom title bar, standard settings
-  cards, remembered window size and position.
+  cards, remembered window size, position and maximized state.
 - Single instance per session.
 
 ## Requirements
@@ -47,7 +47,7 @@ your downloads, diffs the file lists, and selects only what actually changed.
 - Windows 10 version 1809 or later, or Windows 11, x64.
 - qBittorrent with the WebUI enabled, for the "add to qBittorrent" step. Comparing
   torrents works without it.
-- Either the .NET 11 Desktop Runtime and the Windows App Runtime 2.6, or the
+- Either the .NET 11 Desktop Runtime and the Windows App Runtime 2.7, or the
   standalone archive, which bundles both.
 
 ## Install
@@ -57,8 +57,8 @@ is written outside `%APPDATA%\Tdt`.
 
 | Archive | Download | Requires |
 | --- | --- | --- |
-| `tdt-<version>-windows-x64.zip` | about 26 MB | .NET 11 Desktop Runtime and Windows App Runtime 2.6 |
-| `tdt-<version>-windows-x64-standalone.zip` | about 90 MB | nothing else |
+| `tdt-<version>-windows-x64.zip` | about 28 MB | .NET 11 Desktop Runtime and Windows App Runtime 2.7 |
+| `tdt-<version>-windows-x64-standalone.zip` | about 96 MB | nothing else |
 
 Take the small archive if those two runtimes are already on the machine;
 otherwise take the standalone one.
@@ -125,7 +125,7 @@ Settings live in a single file:
 | `qbittorrent.apiKey` | 5.2+ API key; when set, form login is never used |
 | `qbittorrent.useHttps` | Use HTTPS for the WebUI |
 | `qbittorrent.blacklist` | Substrings that are never selected |
-| `window` | Last window size and position |
+| `window` | Last window size, position and whether it was maximized |
 
 The password and the API key are encrypted with DPAPI for the current Windows
 account, so a copied settings file cannot be read on another account or machine.
@@ -232,7 +232,7 @@ bump. Tags are signed, so `git tag` needs `-a -m`.
 | Nothing is selected | The changed paths may be blacklisted |
 | A file I did not expect is downloading | It changed size in the release, so it is treated as replaced |
 | SmartScreen blocks the app | The build is unsigned; use "More info" → "Run anyway" |
-| The small archive fails to start | Install the .NET 11 Desktop Runtime and Windows App Runtime 2.6, or use the standalone archive |
+| The small archive fails to start | Install the .NET 11 Desktop Runtime and Windows App Runtime 2.7, or use the standalone archive |
 | Settings were reset after a crash | The unreadable file was kept as `settings.corrupt-<timestamp>.json` in `%APPDATA%\Tdt` |
 
 ## License
