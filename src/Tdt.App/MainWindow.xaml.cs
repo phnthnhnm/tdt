@@ -14,6 +14,9 @@ public sealed partial class MainWindow : Window
     private const int MinimumWidth = 760;
     private const int MinimumHeight = 520;
 
+    /// <summary>The last geometry seen while the window was not maximized.</summary>
+    private RectInt32? _normalBounds;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -26,6 +29,10 @@ public sealed partial class MainWindow : Window
 
         ConfigureBackdrop();
         ConfigureTitleBar();
+
+        // Subscribe before restoring: the restore call itself is what reports the
+        // first normal geometry.
+        AppWindow.Changed += OnAppWindowChanged;
         RestoreOrCenter();
 
         Closed += OnClosed;
@@ -81,6 +88,11 @@ public sealed partial class MainWindow : Window
         }
 
         appWindow.MoveAndResize(new RectInt32(x, y, width, height));
+
+        if (saved.Maximized && appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
     }
 
     /// <summary>True when enough of the saved rectangle is on this display.</summary>
@@ -95,20 +107,67 @@ public sealed partial class MainWindow : Window
             && bottom > work.Y;
     }
 
+    private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        if (!args.DidSizeChange && !args.DidPositionChange)
+        {
+            return;
+        }
+
+        // A maximized window reports the maximized rectangle here, which must
+        // never become the size the window restores to.
+        if (AppWindow.Presenter is OverlappedPresenter presenter &&
+            presenter.State != OverlappedPresenterState.Restored)
+        {
+            return;
+        }
+
+        var size = AppWindow.Size;
+        var position = AppWindow.Position;
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return;
+        }
+
+        _normalBounds = new RectInt32(position.X, position.Y, size.Width, size.Height);
+    }
+
     private void OnClosed(object sender, WindowEventArgs args)
     {
         App.Services.Theme.Unregister(this);
+        AppWindow.Changed -= OnAppWindowChanged;
 
-        var position = AppWindow.Position;
-        var size = AppWindow.Size;
+        var maximized = AppWindow.Presenter is OverlappedPresenter presenter &&
+            presenter.State == OverlappedPresenterState.Maximized;
+
+        // Maximized: keep the restore geometry. If the window was maximized
+        // before it ever reported a normal size, reuse the stored placement
+        // instead of writing the maximized rectangle.
+        var bounds = _normalBounds ?? StoredBounds() ?? CurrentBounds();
 
         try
         {
-            App.Services.SaveWindowBounds(size.Width, size.Height, position.X, position.Y);
+            App.Services.SaveWindowBounds(
+                bounds.Width, bounds.Height, bounds.X, bounds.Y, maximized);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Failing to remember the geometry must never block shutdown.
         }
+    }
+
+    private static RectInt32? StoredBounds()
+    {
+        var saved = App.Services.Settings.Window;
+        return saved.HasBounds
+            ? new RectInt32(saved.X, saved.Y, saved.Width, saved.Height)
+            : null;
+    }
+
+    private RectInt32 CurrentBounds()
+    {
+        var size = AppWindow.Size;
+        var position = AppWindow.Position;
+        return new RectInt32(position.X, position.Y, size.Width, size.Height);
     }
 }

@@ -110,7 +110,10 @@ public sealed class AppServices
     }
 
     /// <summary>Remembers the main window geometry for the next start.</summary>
-    public void SaveWindowBounds(int width, int height, int x, int y)
+    /// <param name="width">Restore width, never the maximized width.</param>
+    /// <param name="height">Restore height, never the maximized height.</param>
+    /// <param name="maximized">Whether the window was maximized when it closed.</param>
+    public void SaveWindowBounds(int width, int height, int x, int y, bool maximized)
     {
         if (width <= 0 || height <= 0)
         {
@@ -121,7 +124,8 @@ public sealed class AppServices
         if (current.Window.Width == width &&
             current.Window.Height == height &&
             current.Window.X == x &&
-            current.Window.Y == y)
+            current.Window.Y == y &&
+            current.Window.Maximized == maximized)
         {
             return;
         }
@@ -132,7 +136,14 @@ public sealed class AppServices
             Theme = current.Theme,
             DataFolder = current.DataFolder,
             QBittorrent = current.QBittorrent,
-            Window = new WindowPlacement { Width = width, Height = height, X = x, Y = y },
+            Window = new WindowPlacement
+            {
+                Width = width,
+                Height = height,
+                X = x,
+                Y = y,
+                Maximized = maximized,
+            },
         });
     }
 }

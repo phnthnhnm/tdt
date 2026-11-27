@@ -249,6 +249,7 @@ public sealed class JsonSettingsStore : ISettingsStore
                 Height = source.Window.Height,
                 X = source.Window.X,
                 Y = source.Window.Y,
+                Maximized = source.Window.Maximized,
             },
             QBittorrent = new QBittorrentSettings
             {

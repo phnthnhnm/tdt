@@ -13,6 +13,12 @@ public sealed class WindowPlacement
 
     public int Y { get; set; }
 
+    /// <summary>
+    /// True when the window was maximized. Width and Height are then the size it
+    /// restores to, not the maximized rectangle.
+    /// </summary>
+    public bool Maximized { get; set; }
+
     /// <summary>False until the window has been positioned at least once.</summary>
     public bool HasBounds => Width > 0 && Height > 0;
 }

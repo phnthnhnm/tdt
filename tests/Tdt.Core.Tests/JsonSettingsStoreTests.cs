@@ -50,6 +50,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(QBittorrentSettings.DefaultPort, settings.QBittorrent.Port);
         Assert.Empty(settings.QBittorrent.Blacklist);
         Assert.False(settings.Window.HasBounds);
+        Assert.False(settings.Window.Maximized);
         Assert.Null(store.LastLoadWarning);
         Assert.False(File.Exists(store.FilePath));
     }
@@ -63,7 +64,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         {
             Theme = AppTheme.Dark,
             DataFolder = @"C:\Torrents\old",
-            Window = new WindowPlacement { Width = 1200, Height = 800, X = 40, Y = 60 },
+            Window = new WindowPlacement { Width = 1200, Height = 800, X = 40, Y = 60, Maximized = true },
             QBittorrent = new QBittorrentSettings
             {
                 Host = "seedbox.local",
@@ -83,6 +84,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(1200, loaded.Window.Width);
         Assert.Equal(60, loaded.Window.Y);
         Assert.True(loaded.Window.HasBounds);
+        Assert.True(loaded.Window.Maximized);
         Assert.Equal("seedbox.local", loaded.QBittorrent.Host);
         Assert.Equal(9091, loaded.QBittorrent.Port);
         Assert.Equal("admin", loaded.QBittorrent.Username);
