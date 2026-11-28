@@ -7,6 +7,7 @@
     xmlns:services="using:Tdt.App.Services"
     xmlns:viewModels="using:Tdt.App.ViewModels"
     AllowDrop="True"
+    NavigationCacheMode="Required"
     Background="Transparent"
     DragEnter="OnDragEnter"
     DragLeave="OnDragLeave"
@@ -18,22 +19,12 @@
         <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
             <StackPanel Spacing="12">
 
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Release torrent" />
-                        <TextBlock
-                            Style="{StaticResource HintTextStyle}"
-                            Text="Open or drop the new .torrent. The archived torrent of the same release is found in the data folder." />
-                    </StackPanel>
-                    <StackPanel
-                        Grid.Column="1"
-                        Orientation="Horizontal"
-                        Spacing="8"
-                        VerticalAlignment="Top">
-                        <Button Content="Report a bug" Click="OnReportBugClick" />
-                        <Button Click="OnSettingsClick" Content="Settings" />
-                    </StackPanel>
-                </Grid>
+                <StackPanel Spacing="2">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Release torrent" />
+                    <TextBlock
+                        Style="{StaticResource HintTextStyle}"
+                        Text="Open or drop the new .torrent. The archived torrent of the same release is found in the data folder." />
+                </StackPanel>
 
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <TextBox

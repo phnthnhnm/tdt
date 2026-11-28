@@ -3,7 +3,8 @@
     x:Class="Tdt.App.Views.AboutPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Background="Transparent">
+    Background="Transparent"
+    NavigationCacheMode="Required">
 
     <ScrollViewer>
         <StackPanel MaxWidth="900" Padding="24,8,24,24" Spacing="8">
@@ -38,6 +39,7 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Command="{x:Bind ViewModel.OpenSettingsFolderCommand}" Content="Open settings folder" />
                         <Button Command="{x:Bind ViewModel.OpenSourceCommand}" Content="Source code" />
+                        <Button Click="OnReportBugClick" Content="Report a bug" />
                     </StackPanel>
                 </StackPanel>
             </Border>

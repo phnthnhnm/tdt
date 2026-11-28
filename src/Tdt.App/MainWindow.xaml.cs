@@ -1,6 +1,8 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Tdt.App.Services;
+using Tdt.App.ViewModels;
 using Tdt.App.Views;
 using Tdt.Core.Models;
 using Windows.Graphics;
@@ -25,7 +27,10 @@ public sealed partial class MainWindow : Window
         App.MainWindow = this;
         App.Services.Theme.Register(this);
 
-        RootFrame.Navigate(typeof(DiffPage));
+        SettingsViewModel = new SettingsViewModel(
+            App.Services,
+            new DialogService(() => (Content as FrameworkElement)?.XamlRoot),
+            this);
 
         ConfigureBackdrop();
         ConfigureTitleBar();
@@ -36,7 +41,12 @@ public sealed partial class MainWindow : Window
         RestoreOrCenter();
 
         Closed += OnClosed;
+
+        Navigation.SelectedItem = CompareItem;
     }
+
+    /// <summary>The settings pages share one view model, so edits stay in sync.</summary>
+    public SettingsViewModel SettingsViewModel { get; }
 
     private void ConfigureBackdrop()
     {
@@ -57,6 +67,34 @@ public sealed partial class MainWindow : Window
 
         // Leave the caption buttons uncovered by the drag region.
         AppTitleBar.Padding = new Thickness(16, 0, AppWindow.TitleBar.RightInset, 0);
+    }
+
+    private void OnNavigationSelectionChanged(
+        NavigationView sender,
+        NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItem is not NavigationViewItem { Tag: string tag })
+        {
+            return;
+        }
+
+        var pageType = tag switch
+        {
+            "qbittorrent" => typeof(QBittorrentPage),
+            "data" => typeof(DataPage),
+            "appearance" => typeof(AppearancePage),
+            "about" => typeof(AboutPage),
+            _ => typeof(DiffPage),
+        };
+
+        if (ContentFrame.CurrentSourcePageType == pageType)
+        {
+            return;
+        }
+
+        ContentFrame.Navigate(
+            pageType,
+            pageType == typeof(DiffPage) ? null : SettingsViewModel);
     }
 
     private void RestoreOrCenter()

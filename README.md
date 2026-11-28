@@ -39,7 +39,7 @@ your downloads, diffs the file lists, and selects only what actually changed.
 - Timestamped settings backup and restore; a settings file that cannot be read is
   kept beside the original instead of being overwritten.
 - Native Windows 11 look: Mica backdrop, custom title bar, standard settings
-  cards, remembered window size, position and maximized state.
+  cards, a collapsible navigation sidebar, remembered window size, position and maximized state.
 - Single instance per session.
 
 ## Requirements
@@ -73,9 +73,9 @@ confirmation the first time. Choose "More info" and then "Run anyway".
 
 ## Usage
 
-1. Open **Settings → Data** and choose the folder where you keep the previously
+1. Open **Data** in the sidebar and choose the folder where you keep the previously
    downloaded `.torrent` files.
-2. Open **Settings → qBittorrent**, enter the WebUI host and port with either the
+2. Open **qBittorrent** in the sidebar, enter the WebUI host and port with either the
    username and password or an API key, and press **Test connection**.
 3. Open the new `.torrent` with **Browse…**, Ctrl+O or drag and drop. The
    comparison runs immediately.
@@ -134,8 +134,8 @@ settings but requires the credentials to be entered again.
 
 A settings file that cannot be read is **not** overwritten: it is moved aside as
 `settings.corrupt-<timestamp>.json` (or `settings.newer-<timestamp>.json` when it
-was written by a newer version) and the app starts with defaults. **Settings →
-Data** can export the file to a timestamped JSON backup, restore it, or reset
+was written by a newer version) and the app starts with defaults. **Data** in the
+sidebar can export the file to a timestamped JSON backup, restore it, or reset
 every setting. Restoring validates the file before it replaces anything.
 
 ## Development
@@ -223,10 +223,10 @@ bump. Tags are signed, so `git tag` needs `-a -m`.
 
 | Symptom | Fix |
 | --- | --- |
-| "Data folder not set in Settings" | Choose the folder in Settings → Data |
+| "Data folder not set in Settings" | Choose the folder under **Data** |
 | "No archived torrent found for this release" | Put the old `.torrent` in the data folder; it matches by file name or by torrent name |
 | "The data folder does not exist" | The configured folder was moved or deleted; choose it again |
-| "qBittorrent settings not configured" | Enter the host and port in Settings → qBittorrent |
+| "qBittorrent settings not configured" | Enter the host and port under **qBittorrent** |
 | "qBittorrent error: qBittorrent login failed (403)" | Check the username and password, or use an API key; **Test connection** reports the same result |
 | The torrent was added but everything is paused | That is intended: the app pauses and selects only the changed files |
 | Nothing is selected | The changed paths may be blacklisted |
