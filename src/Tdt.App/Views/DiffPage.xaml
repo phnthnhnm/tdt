@@ -32,6 +32,7 @@
                         PlaceholderText="No torrent selected"
                         Text="{x:Bind ViewModel.NewTorrentPath, Mode=OneWay}" />
                     <Button
+                        x:Name="BrowseButton"
                         Grid.Column="1"
                         Content="Browse..."
                         Command="{x:Bind ViewModel.PickTorrentCommand}">

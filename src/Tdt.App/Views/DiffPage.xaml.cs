@@ -9,6 +9,8 @@ namespace Tdt.App.Views;
 
 public sealed partial class DiffPage : Page
 {
+    private bool _focusedOnce;
+
     public DiffPage()
     {
         ViewModel = new DiffViewModel(
@@ -17,9 +19,25 @@ public sealed partial class DiffPage : Page
             App.MainWindow ?? throw new InvalidOperationException("The main window is not available."));
 
         InitializeComponent();
+        Loaded += OnLoaded;
     }
 
     public DiffViewModel ViewModel { get; }
+
+    /// <summary>
+    /// Put the initial focus on the primary action instead of the pane toggle,
+    /// which would otherwise start the app with a ring around the hamburger.
+    /// </summary>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_focusedOnce)
+        {
+            return;
+        }
+
+        _focusedOnce = true;
+        BrowseButton.Focus(FocusState.Programmatic);
+    }
 
     private void OnDragEnter(object sender, DragEventArgs e)
     {
